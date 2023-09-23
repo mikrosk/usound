@@ -255,7 +255,7 @@ int AtariSoundSetupInitXbios(const AudioSpec* desired, AudioSpec* obtained) {
 	Getcookie(C__MCH, &mch);
 	mch >>= 16;
 
-	if (mch == MCH_FALCON) {
+	if (mch == MCH_FALCON || mch == MCH_ARANYM) {
 		/* use Falcon frequencies */
 		int clk;
 		int diff50 = abs(49170 - desired->frequency);
