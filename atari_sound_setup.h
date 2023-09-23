@@ -393,7 +393,7 @@ int AtariSoundSetupDeinitXbios() {
 	Soundcmd(ADDERIN, ADCIN);	// restore adder with ADC+PSG
 	Unlocksnd();
 
-	return 0;
+	return 1;
 }
 
 #endif
