@@ -178,7 +178,7 @@ int AtariSoundSetupInitXbios(const AudioSpec* desired, AudioSpec* obtained) {
 		return 0;
 
 	/* this tests presence of an XBIOS, too */
-	if (Locksnd() < 0)
+	if (Locksnd() != 1)
 		return 0;
 
 	long snd;
