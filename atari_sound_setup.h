@@ -66,32 +66,32 @@ static int detectFormat(
 
 	/* prefer the same bit-depth & endianness */
 	for (int i = 0; !found && i < AudioFormatCount; i++) {
+		if (!formatsAvailable[i])
+			continue;
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wswitch"	/* "enumeration value 'AudioFormatCount' not handled in switch" */
 		switch (desired->format) {
 			case AudioFormatSigned8:
 			case AudioFormatUnsigned8:
-				if (formatsAvailable[i] == AudioFormatUnsigned8
-					|| formatsAvailable[i] == AudioFormatSigned8) {
-					obtained->format = formatsAvailable[i];
+				if (i == AudioFormatUnsigned8 || i == AudioFormatSigned8) {
+					obtained->format = (AudioFormat)i;
 					found = 1;
 				}
 				break;
 
 			case AudioFormatSigned16LSB:
 			case AudioFormatUnsigned16LSB:
-				if (formatsAvailable[i] == AudioFormatUnsigned16LSB
-					|| formatsAvailable[i] == AudioFormatSigned16LSB) {
-					obtained->format = formatsAvailable[i];
+				if (i == AudioFormatUnsigned16LSB || i == AudioFormatSigned16LSB) {
+					obtained->format = (AudioFormat)i;
 					found = 1;
 				}
 				break;
 
 			case AudioFormatSigned16MSB:
 			case AudioFormatUnsigned16MSB:
-				if (formatsAvailable[i] == AudioFormatUnsigned16MSB
-					|| formatsAvailable[i] == AudioFormatSigned16MSB) {
-					obtained->format = formatsAvailable[i];
+				if (i == AudioFormatUnsigned16MSB || i == AudioFormatSigned16MSB) {
+					obtained->format = (AudioFormat)i;
 					found = 1;
 				}
 				break;
@@ -101,15 +101,17 @@ static int detectFormat(
 
 	/* prefer the same sign */
 	for (int i = 0; !found && i < AudioFormatCount; i++) {
+		if (!formatsAvailable[i])
+			continue;
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wswitch"	/* "enumeration value 'AudioFormatCount' not handled in switch" */
 		switch (desired->format) {
 			case AudioFormatSigned8:
 			case AudioFormatSigned16LSB:
 			case AudioFormatSigned16MSB:
-				if (formatsAvailable[i] == AudioFormatSigned16MSB
-					|| formatsAvailable[i] == AudioFormatSigned16LSB) {
-					obtained->format = formatsAvailable[i];
+				if (i == AudioFormatSigned16MSB || i == AudioFormatSigned16LSB) {
+					obtained->format = (AudioFormat)i;
 					found = 1;
 				}
 				break;
@@ -117,9 +119,8 @@ static int detectFormat(
 			case AudioFormatUnsigned8:
 			case AudioFormatUnsigned16LSB:
 			case AudioFormatUnsigned16MSB:
-				if (formatsAvailable[i] == AudioFormatUnsigned16MSB
-					|| formatsAvailable[i] == AudioFormatUnsigned16LSB) {
-					obtained->format = formatsAvailable[i];
+				if (i == AudioFormatUnsigned16MSB || i == AudioFormatUnsigned16LSB) {
+					obtained->format = (AudioFormat)i;
 					found = 1;
 				}
 				break;
@@ -133,10 +134,12 @@ static int detectFormat(
 	 * 	- desired 16-bit, available 16-bit (non-matching sign & endianness)
 	 */
 	for (int i = 0; !found && i < AudioFormatCount; i++) {
+		if (!formatsAvailable[i])
+			continue;
+
 		/* take the first available 16-bit format */
-		if (formatsAvailable[i] != AudioFormatSigned8
-			&& formatsAvailable[i] != AudioFormatUnsigned8) {
-			obtained->format = formatsAvailable[i];
+		if (i != AudioFormatSigned8 && i != AudioFormatUnsigned8) {
+			obtained->format = (AudioFormat)i;
 			found = 1;
 		}
 	}
@@ -146,19 +149,19 @@ static int detectFormat(
 		if (formatsAvailable[AudioFormatSigned8]
 			&& (desired->format == AudioFormatSigned16LSB
 				|| desired->format == AudioFormatSigned16MSB)) {
-			obtained->format = formatsAvailable[AudioFormatSigned8];
+			obtained->format = AudioFormatSigned8;
 			found = 1;
 		} else if (formatsAvailable[AudioFormatUnsigned8]
 			&& (desired->format == AudioFormatUnsigned16LSB
 				|| desired->format == AudioFormatUnsigned16MSB)) {
-			obtained->format = formatsAvailable[AudioFormatUnsigned8];
+			obtained->format = AudioFormatUnsigned8;
 			found = 1;
 		}
 
 		for (int i = 0; !found && i < AudioFormatCount; i++) {
 			/* take the first available (8-bit) format */
 			if (formatsAvailable[i]) {
-				obtained->format = formatsAvailable[i];
+				obtained->format = (AudioFormat)i;
 				found = 1;
 			}
 		}
