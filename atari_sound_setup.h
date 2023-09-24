@@ -319,6 +319,7 @@ int AtariSoundSetupInitXbios(const AudioSpec* desired, AudioSpec* obtained) {
 			clk = PRE1280;
 		}
 
+		Devconnect(DMAPLAY, DAC, CLK25M, CLKOLD, NO_SHAKE);
 		Soundcmd(SETPRESCALE, clk);
 	}
 
