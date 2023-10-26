@@ -184,10 +184,12 @@ int AtariSoundSetupInitXbios(const AudioSpec* desired, AudioSpec* obtained) {
 	if (Locksnd() != 1)
 		return 0;
 
-	long snd;
+	long mcsn = 0;
+	Getcookie(C_McSn, &mcsn);
+
+	long snd = 0;
 	if (Getcookie(C__SND, &snd) != C_FOUND) {
-		long mcsn;
-		if (Getcookie(C_McSn, &mcsn) == C_FOUND) {
+		if (mcsn) {
 			/* X-Sound doesn't set _SND (MacSound does) */
 			snd = SND_PSG | SND_8BIT;
 		} else  {
@@ -195,7 +197,7 @@ int AtariSoundSetupInitXbios(const AudioSpec* desired, AudioSpec* obtained) {
 		}
 	}
 
-	long stfa;
+	long stfa = 0;
 	if (Getcookie(C_STFA, &stfa) == C_FOUND) {
 		/* see http://removers.free.fr/softs/stfa.php#STFA */
 		struct STFA_control {
@@ -353,8 +355,32 @@ int AtariSoundSetupInitXbios(const AudioSpec* desired, AudioSpec* obtained) {
 			clk = PRE1280;
 		}
 
-		Devconnect(DMAPLAY, DAC, CLK25M, CLKOLD, NO_SHAKE);
-		Soundcmd(SETPRESCALE, clk);
+		if (!mcsn) {
+			Devconnect(DMAPLAY, DAC, CLK25M, CLKOLD, NO_SHAKE);
+			Soundcmd(SETPRESCALE, clk);
+		} else {
+			/*
+			 * hack for X-SOUND which doesn't understand SETPRESCALE
+			 * and yet happily pretends that Falcon frequencies are
+			 * STE/TT ones
+			 */
+			switch (clk) {
+				case PRE160:
+					clk = CLK50K;
+					break;
+				case PRE320:
+					clk = CLK25K;
+					break;
+				case PRE640:
+					clk = CLK12K;
+					break;
+				case PRE1280:
+					clk = 15;	/* "6146 Hz" (illegal on Falcon)" */
+					break;
+			}
+
+			Devconnect(DMAPLAY, DAC, CLK25M, clk, NO_SHAKE);
+		}
 	}
 
 	if (desired->channels == 1
