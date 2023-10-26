@@ -195,6 +195,40 @@ int AtariSoundSetupInitXbios(const AudioSpec* desired, AudioSpec* obtained) {
 		}
 	}
 
+	long stfa;
+	if (Getcookie(C_STFA, &stfa) == C_FOUND) {
+		/* see http://removers.free.fr/softs/stfa.php#STFA */
+		struct STFA_control {
+			uint16 sound_enable;
+			uint16 sound_control;
+			uint16 sound_output;
+			uint32 sound_start;
+			uint32 sound_current;
+			uint32 sound_end;
+			uint16 version;
+			uint32 old_vbl;
+			uint32 old_timerA;
+			uint32 old_mfp_status;
+			uint32 stfa_vbl;
+			uint32 drivers_list;
+			uint32 play_stop;
+			uint16 timer_a_setting;
+			uint32 set_frequency;
+			uint16 frequency_treshold;
+			uint32 custom_freq_table;
+			int16 stfa_on_off;
+			uint32 new_drivers_list;
+			uint32 old_bit_2_of_cookie_snd;
+			uint32 it;
+		} __attribute__((packed));
+
+		/* check whether SND_16BIT isn't emulated */
+		STFA_control* stfaControl = (STFA_control*)stfa;
+		if (stfaControl->version >= 0x0200 && !stfaControl->old_bit_2_of_cookie_snd) {
+			snd &= ~SND_16BIT;
+		}
+	}
+
 	int formatsAvailable[AudioFormatCount] = { 0 };
 	int has16bitMono = 0;
 
