@@ -13,10 +13,6 @@
  * with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-/*
- * TODO: external DSP clock (also supported by "McSn" cookie)
- */
-
 #ifndef ATARI_SOUND_SETUP_H
 #define ATARI_SOUND_SETUP_H
 
@@ -184,55 +180,97 @@ int AtariSoundSetupInitXbios(const AudioSpec* desired, AudioSpec* obtained) {
 	if (Locksnd() != 1)
 		return 0;
 
-	long mcsn = 0;
-	Getcookie(C_McSn, &mcsn);
+	int formatsAvailable[AudioFormatCount] = { 0 };
+	int has8bitStereo = 1;
+	int has16bitMono = 0;
+	int extClock1 = 0;
+	int extClock2 = 0;
+
+	enum {
+		MCH_ST = 0,
+		MCH_STE,
+		MCH_TT_OR_HADES,
+		MCH_FALCON,
+		MCH_MILAN,
+		MCH_ARANYM
+	};
+	long mch = MCH_ST<<16;
+	Getcookie(C__MCH, &mch);
+	mch >>= 16;
+
+	if (mch == MCH_FALCON) {
+		// TODO: clkprobe(&extClock1, &extClock2);
+	}
 
 	long snd = 0;
-	if (Getcookie(C__SND, &snd) != C_FOUND) {
-		if (mcsn) {
-			/* X-Sound doesn't set _SND (MacSound does) */
+	Getcookie(C__SND, &snd);
+
+	long mcsn = 0;
+	if (Getcookie(C_McSn, &mcsn) == C_FOUND) {
+		struct McSnCookie {
+			uint16_t vers;		/* version in BCD */
+			uint16_t size;		/* struct size */
+			uint16_t play;		/* playback availability */
+			uint16_t record;	/* recording availability */
+			uint16_t dsp;		/* DSP availability */
+			uint16_t pint;		/* end-of-frame interrupt by playback availability */
+			uint16_t rint;		/* end-of-frame interrupt by recording availability */
+
+			uint32_t res1;		/* external clock for Devconnect(x,x,1,x,x) */
+			uint32_t res2;
+			uint32_t res3;
+			uint32_t res4;
+		} __attribute__((packed));
+
+		/* check whether 8-bit stereo is available */
+		struct McSnCookie* mcsnCookie = (struct McSnCookie*)mcsn;
+		has8bitStereo = (mcsnCookie->play == 1 || mcsnCookie->play == 2);	/* STE/TT or Falcon */
+
+		/* MacSound offers an emulated external 44.1 kHz clock */
+		if (mcsnCookie->play == 2 && extClock1 == 0 && extClock2 == 0)
+			extClock1 = 1;
+
+		/* X-Sound doesn't set _SND (MacSound does) */
+		if (!snd)
 			snd = SND_PSG | SND_8BIT;
-		} else  {
-			return 0;
-		}
 	}
+
+	if (!snd)
+		return 0;
 
 	long stfa = 0;
 	if (Getcookie(C_STFA, &stfa) == C_FOUND) {
 		/* see http://removers.free.fr/softs/stfa.php#STFA */
 		struct STFA_control {
-			uint16 sound_enable;
-			uint16 sound_control;
-			uint16 sound_output;
-			uint32 sound_start;
-			uint32 sound_current;
-			uint32 sound_end;
-			uint16 version;
-			uint32 old_vbl;
-			uint32 old_timerA;
-			uint32 old_mfp_status;
-			uint32 stfa_vbl;
-			uint32 drivers_list;
-			uint32 play_stop;
-			uint16 timer_a_setting;
-			uint32 set_frequency;
-			uint16 frequency_treshold;
-			uint32 custom_freq_table;
-			int16 stfa_on_off;
-			uint32 new_drivers_list;
-			uint32 old_bit_2_of_cookie_snd;
-			uint32 it;
+			uint16_t sound_enable;
+			uint16_t sound_control;
+			uint16_t sound_output;
+			uint32_t sound_start;
+			uint32_t sound_current;
+			uint32_t sound_end;
+			uint16_t version;
+			uint32_t old_vbl;
+			uint32_t old_timerA;
+			uint32_t old_mfp_status;
+			uint32_t stfa_vbl;
+			uint32_t drivers_list;
+			uint32_t play_stop;
+			uint16_t timer_a_setting;
+			uint32_t set_frequency;
+			uint16_t frequency_treshold;
+			uint32_t custom_freq_table;
+			int16_t stfa_on_off;
+			uint32_t new_drivers_list;
+			uint32_t old_bit_2_of_cookie_snd;
+			uint32_t it;
 		} __attribute__((packed));
 
 		/* check whether SND_16BIT isn't emulated */
-		STFA_control* stfaControl = (STFA_control*)stfa;
+		struct STFA_control* stfaControl = (struct STFA_control*)stfa;
 		if (stfaControl->version >= 0x0200 && !stfaControl->old_bit_2_of_cookie_snd) {
 			snd &= ~SND_16BIT;
 		}
 	}
-
-	int formatsAvailable[AudioFormatCount] = { 0 };
-	int has16bitMono = 0;
 
 	if (snd & SND_EXT) {
 		/* this should be safe to assume... */
@@ -281,107 +319,96 @@ int AtariSoundSetupInitXbios(const AudioSpec* desired, AudioSpec* obtained) {
 	/* reset connection matrix (and other settings) */
 	Sndstatus(SND_RESET);
 
-	enum {
-		MCH_ST = 0,
-		MCH_STE,
-		MCH_TT_OR_HADES,
-		MCH_FALCON,
-		MCH_MILAN,
-		MCH_ARANYM
+	struct FrequencySetting {
+		int frequency;
+		int clk;		/* clock for Devconnect() */
+		int prescale;		/* prescale for Devconnect() */
+		int prescaleOld;	/* prescale for Soundcmd(SETPRESCALE), -1 if prescale != CLKOLD */
+		int clkType;		/* 0: internal, 1: external 44.1 kHz, 2: external 48 kHz */
 	};
 
-	long mch = MCH_ST<<16;
-	Getcookie(C__MCH, &mch);
-	mch >>= 16;
+	static const struct FrequencySetting frequencies[] = {
+		/* STE/TT */
+		{ 50066, CLK25M, CLKOLD,  PRE160, 0 },
+		{ 25033, CLK25M, CLKOLD,  PRE320, 0 },
+		{ 12517, CLK25M, CLKOLD,  PRE640, 0 },
+		{  6258, CLK25M, CLKOLD, PRE1280, 0 },
+		/* Falcon */
+		{ 49170, CLK25M, CLK50K, -1, 0 },
+		{ 32780, CLK25M, CLK33K, -1, 0 },
+		{ 24585, CLK25M, CLK25K, -1, 0 },
+		{ 19668, CLK25M, CLK20K, -1, 0 },
+		{ 16390, CLK25M, CLK16K, -1, 0 },
+		{ 12292, CLK25M, CLK12K, -1, 0 },
+		{  9834, CLK25M, CLK10K, -1, 0 },
+		{  8195, CLK25M, CLK8K,  -1, 0 },
+		/* CD */
+		{ 44100, CLKEXT, CLK50K, -1, 1 },
+		{ 29400, CLKEXT, CLK33K, -1, 1 },
+		{ 22050, CLKEXT, CLK25K, -1, 1 },
+		{ 17640, CLKEXT, CLK20K, -1, 1 },
+		{ 14700, CLKEXT, CLK16K, -1, 1 },
+		{ 11025, CLKEXT, CLK12K, -1, 1 },
+		{  8820, CLKEXT, CLK10K, -1, 1 },
+		{  7350, CLKEXT, CLK8K,  -1, 1 },
+		/* DAT */
+		{ 48000, CLKEXT, CLK50K, -1, 2 },
+		{ 32000, CLKEXT, CLK33K, -1, 2 },
+		{ 24000, CLKEXT, CLK25K, -1, 2 },
+		{ 19200, CLKEXT, CLK20K, -1, 2 },
+		{ 16000, CLKEXT, CLK16K, -1, 2 },
+		{ 12000, CLKEXT, CLK12K, -1, 2 },
+		{  9600, CLKEXT, CLK10K, -1, 2 },
+		{  8000, CLKEXT, CLK8K,  -1, 2 }
+	};
+	static const int frequenciesCount = sizeof(frequencies) / sizeof(frequencies[0]);
 
-	if (mch == MCH_FALCON || mch == MCH_ARANYM) {
-		/* use Falcon frequencies */
-		int clk;
-		int diff50 = abs(49170 - desired->frequency);
-		int diff33 = abs(32780 - desired->frequency);
-		int diff25 = abs(24585 - desired->frequency);
-		int diff20 = abs(19668 - desired->frequency);
-		int diff16 = abs(16390 - desired->frequency);
-		int diff12 = abs(12292 - desired->frequency);
-		int diff10 = abs(9834  - desired->frequency);
-		int diff8  = abs(8195  - desired->frequency);
+	struct FrequencySetting frequencySetting = { 0, 0, 0, 0, 0 };
+	for (int i = 0; i < frequenciesCount; i++) {
+		/* assume that SND_16BIT implies availability of Falcon frequencies */
+		if (frequencies[i].prescale != CLKOLD && !(snd & SND_16BIT))
+			continue;
 
-		if (diff50 < diff33) {
-			obtained->frequency = 49170;
-			clk = CLK50K;
-		} else if (diff33 < diff25) {
-			obtained->frequency = 32780;
-			clk = CLK33K;
-		} else if (diff25 < diff20) {
-			obtained->frequency = 24585;
-			clk = CLK25K;
-		} else if (diff20 < diff16) {
-			obtained->frequency = 19668;
-			clk = CLK20K;
-		} else if (diff16 < diff12) {
-			obtained->frequency = 16390;
-			clk = CLK16K;
-		} else if (diff12 < diff10) {
-			obtained->frequency = 12292;
-			clk = CLK12K;
-		} else if (diff10 < diff8) {
-			obtained->frequency = 9834;
-			clk = CLK10K;
-		} else {
-			obtained->frequency = 8195;
-			clk = CLK8K;
-		}
+		/* skip external clock frequencies if not present */
+		if (frequencies[i].clkType != 0 && frequencies[i].clkType != extClock1 && frequencies[i].clkType != extClock2)
+			continue;
 
-		Devconnect(DMAPLAY, DAC, CLK25M, clk, NO_SHAKE);
-	} else {
-		/* use STE/TT frequencies */
-		int clk;
-		int diff50 = abs(50066 - desired->frequency);
-		int diff25 = abs(25033 - desired->frequency);
-		int diff12 = abs(12517 - desired->frequency);
-		int diff6  = abs(6258  - desired->frequency);
+		if (frequencySetting.frequency == 0
+			|| abs(frequencies[i].frequency - desired->frequency) < abs(frequencySetting.frequency - desired->frequency)) {
+			frequencySetting = frequencies[i];
 
-		if (diff50 < diff25) {
-			obtained->frequency = 50066;
-			clk = PRE160;
-		} else if (diff25 < diff12) {
-			obtained->frequency = 25033;
-			clk = PRE320;
-		} else if (diff12 < diff6) {
-			obtained->frequency = 12517;
-			clk = PRE640;
-		} else {
-			obtained->frequency = 6258;
-			clk = PRE1280;
-		}
-
-		if (!mcsn) {
-			Devconnect(DMAPLAY, DAC, CLK25M, CLKOLD, NO_SHAKE);
-			Soundcmd(SETPRESCALE, clk);
-		} else {
-			/*
-			 * hack for X-SOUND which doesn't understand SETPRESCALE
-			 * and yet happily pretends that Falcon frequencies are
-			 * STE/TT ones
-			 */
-			switch (clk) {
+			if (mcsn && frequencySetting.prescale == CLKOLD && !(snd & SND_16BIT)) {
+				/*
+				 * hack for X-SOUND which doesn't understand SETPRESCALE
+				 * and yet happily pretends that Falcon frequencies are
+				 * STE/TT ones
+				 */
+				switch (frequencySetting.prescaleOld) {
 				case PRE160:
-					clk = CLK50K;
+					frequencySetting.prescale = CLK50K;
 					break;
 				case PRE320:
-					clk = CLK25K;
+					frequencySetting.prescale = CLK25K;
 					break;
 				case PRE640:
-					clk = CLK12K;
+					frequencySetting.prescale = CLK12K;
 					break;
 				case PRE1280:
-					clk = 15;	/* "6146 Hz" (illegal on Falcon)" */
+					frequencySetting.prescale = 15;	/* "6146 Hz" (illegal on Falcon)" */
 					break;
+				}
 			}
-
-			Devconnect(DMAPLAY, DAC, CLK25M, clk, NO_SHAKE);
 		}
 	}
+
+	if (!frequencySetting.frequency)
+		return 0;
+
+	obtained->frequency = frequencySetting.frequency;
+
+	Devconnect(DMAPLAY, DAC, frequencySetting.clk, frequencySetting.prescale, NO_SHAKE);
+	if (frequencySetting.prescale == CLKOLD)
+		Soundcmd(SETPRESCALE, frequencySetting.prescaleOld);
 
 	if (desired->channels == 1
 		&& obtained->format != AudioFormatSigned8
@@ -389,6 +416,11 @@ int AtariSoundSetupInitXbios(const AudioSpec* desired, AudioSpec* obtained) {
 		&& !has16bitMono) {
 		/* Falcon lacks 16-bit mono */
 		obtained->channels = 2;
+	} else if (desired->channels == 2
+		&& (obtained->format == AudioFormatSigned8 || obtained->format == AudioFormatUnsigned8)
+		&& !has8bitStereo) {
+		/* ST emulation lacks 8-bit stereo */
+		obtained->channels = 1;
 	} else {
 		obtained->channels = desired->channels;
 	}
