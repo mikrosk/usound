@@ -552,6 +552,16 @@ int AtariSoundSetupInitXbios(const AudioSpec* desired, AudioSpec* obtained) {
 			}
 		}
 		Devconnect(DMAPLAY, DAC, frequencySetting.clk, frequencySetting.prescale, NO_SHAKE);
+		if (mch == MCH_FALCON && frequencySetting.clk == CLKEXT) {
+			/*
+			 * if DAC is using CLKEXT, ADC has to follow the suit
+			 *
+			 * NOTE: the value set for the ADC in 0xffff8930 is in fact
+			 *       0b11, i.e. not CLKEXT (0b01); it is an undocumented
+			 *       hardware quirk.
+			 */
+			Devconnect(ADC, 0x00, CLKEXT, frequencySetting.prescale, NO_SHAKE);
+		}
 		if (frequencySetting.prescale == CLKOLD)
 			Soundcmd(SETPRESCALE, frequencySetting.prescaleOld);
 	}
