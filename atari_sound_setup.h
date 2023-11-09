@@ -58,6 +58,10 @@ typedef struct {
 	uint16_t	size;		// buffer size (calculated )
 } AudioSpec;
 
+int AtariSoundSetupInitXbios(const AudioSpec* desired, AudioSpec* obtained);
+int AtariSoundSetupDeinitXbios(void);
+
+////////////////////////////////////////////////////////////////////////////////
 
 /*
  * Find out the speed of external clock
@@ -158,9 +162,6 @@ static inline int detectFalconClocks(int *extClock1, int *extClock2) {
 	 */
 	Gpio(GPIO_WRITE, 0x02);
 	*extClock1 = Supexec(externalClockTest);
-
-	// GPIO pins are kept intact
-	Sndstatus(SND_RESET);
 
 	Mfree(bufs);
 
@@ -284,6 +285,16 @@ static inline int detectFormat(
 	return found;
 }
 
+static int locked;
+static int oldGpio;
+static int oldLtAtten;
+static int oldRtAtten;
+static int oldLtGain;
+static int oldRtGain;
+static int oldAdderIn;
+static int oldAdcInput;
+static int oldPrescale;
+
 int AtariSoundSetupInitXbios(const AudioSpec* desired, AudioSpec* obtained) {
 	if (!desired || !obtained)
 		return 0;
@@ -298,7 +309,16 @@ int AtariSoundSetupInitXbios(const AudioSpec* desired, AudioSpec* obtained) {
 	if (Locksnd() != 1)
 		return 0;
 
-	// TODO: save old values
+	locked = 1;
+	oldGpio = Gpio(GPIO_READ, SND_INQUIRE);	// 'data' is ignored
+	oldLtAtten = Soundcmd(LTATTEN, SND_INQUIRE);
+	oldRtAtten = Soundcmd(RTATTEN, SND_INQUIRE);
+	oldLtGain = Soundcmd(LTGAIN, SND_INQUIRE);
+	oldRtGain = Soundcmd(RTGAIN, SND_INQUIRE);
+	oldAdderIn = Soundcmd(ADDERIN, SND_INQUIRE);
+	oldAdcInput = Soundcmd(ADCINPUT, SND_INQUIRE);
+	oldPrescale = Soundcmd(SETPRESCALE, SND_INQUIRE);
+	// we could save also SND_EXT Soundcmd() modes here but that's perhaps overkill
 
 	int formatsAvailable[AudioFormatCount] = { 0 };
 	int has8bitStereo = 1;
@@ -320,7 +340,7 @@ int AtariSoundSetupInitXbios(const AudioSpec* desired, AudioSpec* obtained) {
 	mch >>= 16;
 
 	if (mch == MCH_FALCON && !detectFalconClocks(&extClock1, &extClock2)) {
-		Unlocksnd();
+		AtariSoundSetupDeinitXbios();
 		return 0;
 	}
 
@@ -363,7 +383,7 @@ int AtariSoundSetupInitXbios(const AudioSpec* desired, AudioSpec* obtained) {
 	}
 
 	if (!snd) {
-		Unlocksnd();
+		AtariSoundSetupDeinitXbios();
 		return 0;
 	}
 
@@ -450,7 +470,7 @@ int AtariSoundSetupInitXbios(const AudioSpec* desired, AudioSpec* obtained) {
 	}
 
 	if (!detectFormat(formatsAvailable, desired, obtained)) {
-		Unlocksnd();
+		AtariSoundSetupDeinitXbios();
 		return 0;
 	}
 
@@ -544,7 +564,7 @@ int AtariSoundSetupInitXbios(const AudioSpec* desired, AudioSpec* obtained) {
 		}
 
 		if (!frequencySetting.frequency) {
-			Unlocksnd();
+			AtariSoundSetupDeinitXbios();
 			return 0;
 		}
 
@@ -646,13 +666,27 @@ int AtariSoundSetupInitXbios(const AudioSpec* desired, AudioSpec* obtained) {
 	return 1;
 }
 
-int AtariSoundSetupDeinitXbios() {
-	Sndstatus(SND_RESET);
-	Soundcmd(ADDERIN, ADCIN);	// set ADC input to the adder
-	Soundcmd(ADCINPUT, ADCLT | ADCRT);	// set L/R PSG as ADC input
-	Unlocksnd();
+int AtariSoundSetupDeinitXbios(void) {
+	if (locked) {
+		locked = 0;
 
-	return 1;
+		// for cases when playback is still running
+		Sndstatus(SND_RESET);
+
+		Gpio(GPIO_WRITE, oldGpio);
+		Soundcmd(LTATTEN, oldLtAtten);
+		Soundcmd(RTATTEN, oldRtAtten);
+		Soundcmd(LTGAIN, oldLtGain);
+		Soundcmd(RTGAIN, oldRtGain);
+		Soundcmd(ADDERIN, oldAdderIn);
+		Soundcmd(ADCINPUT, oldAdcInput);
+		Soundcmd(SETPRESCALE, oldPrescale);
+
+		Unlocksnd();
+		return 1;
+	}
+
+	return 0;
 }
 
 #endif
