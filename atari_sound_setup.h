@@ -285,6 +285,16 @@ static inline int detectFormat(
 	return found;
 }
 
+enum {
+	MCH_ST = 0,
+	MCH_STE,
+	MCH_TT_OR_HADES,
+	MCH_FALCON,
+	MCH_MILAN,
+	MCH_ARANYM
+};
+static long mch;
+
 static int locked;
 static int oldGpio;
 static int oldLtAtten;
@@ -310,7 +320,6 @@ int AtariSoundSetupInitXbios(const AudioSpec* desired, AudioSpec* obtained) {
 		return 0;
 
 	locked = 1;
-	oldGpio = Gpio(GPIO_READ, SND_INQUIRE);	// 'data' is ignored
 	oldLtAtten = Soundcmd(LTATTEN, SND_INQUIRE);
 	oldRtAtten = Soundcmd(RTATTEN, SND_INQUIRE);
 	oldLtGain = Soundcmd(LTGAIN, SND_INQUIRE);
@@ -327,21 +336,17 @@ int AtariSoundSetupInitXbios(const AudioSpec* desired, AudioSpec* obtained) {
 	int extClock1 = 0;
 	int extClock2 = 0;
 
-	enum {
-		MCH_ST = 0,
-		MCH_STE,
-		MCH_TT_OR_HADES,
-		MCH_FALCON,
-		MCH_MILAN,
-		MCH_ARANYM
-	};
-	long mch = MCH_ST<<16;
+	mch = MCH_ST<<16;
 	Getcookie(C__MCH, &mch);
 	mch >>= 16;
 
-	if (mch == MCH_FALCON && !detectFalconClocks(&extClock1, &extClock2)) {
-		AtariSoundSetupDeinitXbios();
-		return 0;
+	if (mch == MCH_FALCON) {
+		oldGpio = Gpio(GPIO_READ, SND_INQUIRE);	// 'data' is ignored
+
+		if (!detectFalconClocks(&extClock1, &extClock2)) {
+			AtariSoundSetupDeinitXbios();
+			return 0;
+		}
 	}
 
 	long snd = 0;
@@ -673,7 +678,9 @@ int AtariSoundSetupDeinitXbios(void) {
 		// for cases when playback is still running
 		Sndstatus(SND_RESET);
 
-		Gpio(GPIO_WRITE, oldGpio);
+		if (mch == MCH_FALCON)
+			Gpio(GPIO_WRITE, oldGpio);
+
 		Soundcmd(LTATTEN, oldLtAtten);
 		Soundcmd(RTATTEN, oldRtAtten);
 		Soundcmd(LTGAIN, oldLtGain);
