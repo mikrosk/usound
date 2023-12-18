@@ -483,6 +483,7 @@ int AtariSoundSetupInitXbios(const AudioSpec* desired, AudioSpec* obtained) {
 	Sndstatus(SND_RESET);
 
 	if (hasFreeFrequency) {
+		Devconnect(DMAPLAY, DAC, CLK25M, CLKOLD, NO_SHAKE);
 		obtained->frequency = Soundcmd(SETSMPFREQ, desired->frequency);
 	} else {
 		struct FrequencySetting {
