@@ -677,6 +677,7 @@ int AtariSoundSetupDeinitXbios(void) {
 		locked = 0;
 
 		// for cases when playback is still running
+		Buffoper(0x00);
 		Sndstatus(SND_RESET);
 
 		if (mch == MCH_FALCON)
