@@ -661,7 +661,11 @@ int AtariSoundSetupInitXbios(const AudioSpec* desired, AudioSpec* obtained) {
 
 	Soundcmd(ADDERIN, MATIN);	// set matrix to the adder
 
+	// (lag in ms) = (samples / frequency) * 1000
 	obtained->samples = desired->samples;
+	while (obtained->samples * 16 > obtained->frequency * 2)
+		obtained->samples >>= 1;
+
 	obtained->size = obtained->samples * obtained->channels;
 	if (obtained->format != AudioFormatSigned8
 		&& obtained->format != AudioFormatUnsigned8) {
