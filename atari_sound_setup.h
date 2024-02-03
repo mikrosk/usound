@@ -55,7 +55,7 @@ typedef struct {
 	uint8_t		channels;	// 1: mono, 2: stereo
 	AudioFormat	format;		// see AudioFormat
 	uint16_t	samples;	// number of samples to process (2^N)
-	uint16_t	size;		// buffer size (calculated )
+	uint32_t	size;		// buffer size (calculated )
 } AudioSpec;
 
 int AtariSoundSetupInitXbios(const AudioSpec* desired, AudioSpec* obtained);
