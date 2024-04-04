@@ -111,7 +111,7 @@ static void FalconDevconnectExtClk(short src, short dst, short pre, short proto)
  *
  * Copyright STGHOST/SECTOR ONE 1999
  */
-static inline int externalClockTest(void) {
+static inline int ExternalClockTest(void) {
 	register int ret __asm__("d0");
 
 	__asm__ volatile(
@@ -163,7 +163,7 @@ static inline int externalClockTest(void) {
 	return ret;
 }
 
-static inline int detectFalconClocks(int *extClock1, int *extClock2) {
+static inline int DetectFalconClocks(int *extClock1, int *extClock2) {
 	const int TEST_BUFSIZE = 8820;
 	char* bufs;
 	char* bufe;
@@ -194,7 +194,7 @@ static inline int detectFalconClocks(int *extClock1, int *extClock2) {
 	 * bit #2: 0 (no FDI reset)
 	 */
 	Gpio(GPIO_WRITE, 0x03);
-	*extClock2 = Supexec(externalClockTest);
+	*extClock2 = Supexec(ExternalClockTest);
 
 	/*
 	 * bit #0: 0 (external clock 1)
@@ -202,14 +202,14 @@ static inline int detectFalconClocks(int *extClock1, int *extClock2) {
 	 * bit #2: 0 (no FDI reset)
 	 */
 	Gpio(GPIO_WRITE, 0x02);
-	*extClock1 = Supexec(externalClockTest);
+	*extClock1 = Supexec(ExternalClockTest);
 
 	Mfree(bufs);
 
 	return 1;
 }
 
-static inline int detectFormat(
+static inline int DetectFormat(
 	const int formatsAvailable[AudioFormatCount],
 	const AudioSpec* desired,
 	AudioSpec* obtained) {
@@ -384,7 +384,7 @@ int AtariSoundSetupInitXbios(const AudioSpec* desired, AudioSpec* obtained) {
 	if (mch == MCH_FALCON) {
 		oldGpio = Gpio(GPIO_READ, SND_INQUIRE);	// 'data' is ignored
 
-		if (!detectFalconClocks(&extClock1, &extClock2)) {
+	if (!DetectFalconClocks(&extClock1, &extClock2)) {
 			AtariSoundSetupDeinitXbios();
 			return 0;
 		}
@@ -515,7 +515,7 @@ int AtariSoundSetupInitXbios(const AudioSpec* desired, AudioSpec* obtained) {
 		formatsAvailable[AudioFormatSigned16MSB] = (snd & SND_16BIT) != 0;
 	}
 
-	if (!detectFormat(formatsAvailable, desired, obtained)) {
+	if (!DetectFormat(formatsAvailable, desired, obtained)) {
 		AtariSoundSetupDeinitXbios();
 		return 0;
 	}
