@@ -63,6 +63,47 @@ int AtariSoundSetupDeinitXbios(void);
 
 ////////////////////////////////////////////////////////////////////////////////
 
+static void FalconDevconnectExtClk(short src, short dst, short pre, short proto) {
+	register long srcPathclk __asm__("d0") = 0;
+
+	__asm__ volatile(
+		"	bra.b	go\n"
+		"\n"
+		"set_src_ext_pathclk:\n"
+		"	and.w	#0x0FFF,0xFFFF8930:w\n"
+		/* Done only in TOS 4.04 */
+		"	or.w	#0x6000,0xFFFF8930:w\n"
+		/* Devconnect() on TOS 4.0x needs content of src_pathclk in d2 due to a bug */
+		"	move.w	0xFFFF8932:w,%%d0\n"
+		"	rts\n"
+		"\n"
+		/* Supexec() */
+		"go:\n"
+		"	pea		(set_src_ext_pathclk,%%pc)\n"
+		"	move.w	#38,%%sp@-\n"
+		"	trap	#14\n"
+		"	addq.l	#6,%%sp\n"
+		"\n"
+		/* Devconnect() */
+		"	move.w	%5,%%sp@-\n"
+		"	move.w	%4,%%sp@-\n"
+		"	move.w	%3,%%sp@-\n"
+		"	move.w	%2,%%sp@-\n"
+		"	move.w	%1,%%sp@-\n"
+		"	move.w	#139,%%sp@-\n"
+		/* Prepare d2.w */
+		"	move.w	%0,%%d2\n"
+		"	trap	#14\n"
+		"	lea		(12,%%sp),%%sp\n"
+
+		: /* outputs */
+		: "r"(srcPathclk), "ri"(src), "ri"(dst), "ri"(CLKEXT), "ri"(pre), "ri"(proto)	/* inputs */
+		: __CLOBBER_RETURN("d0") "d1", "d2", "a0", "a1", "a2", "cc" AND_MEMORY
+	);
+
+	/* Return value of Devconnect() is broken on Falcon */
+}
+
 /*
  * Find out the speed of external clock
  * even for a dual external clock !!!
@@ -135,7 +176,7 @@ static inline int detectFalconClocks(int *extClock1, int *extClock2) {
 	memset(bufs, 0, TEST_BUFSIZE);
 
 	Sndstatus(SND_RESET);
-	Devconnect(DMAPLAY, DAC, CLKEXT, CLK50K, NO_SHAKE);
+	FalconDevconnectExtClk(DMAPLAY, DAC, CLK50K, NO_SHAKE);
 	Setmode(MODE_MONO);
 	Soundcmd(ADDERIN, MATIN);
 	Setbuffer(SR_PLAY, bufs, bufe);
@@ -583,16 +624,10 @@ int AtariSoundSetupInitXbios(const AudioSpec* desired, AudioSpec* obtained) {
 				Gpio(GPIO_WRITE, 0x03);
 			}
 		}
-		Devconnect(DMAPLAY, DAC, frequencySetting.clk, frequencySetting.prescale, NO_SHAKE);
 		if (mch == MCH_FALCON && frequencySetting.clk == CLKEXT) {
-			/*
-			 * if DAC is using CLKEXT, ADC has to follow the suit
-			 *
-			 * NOTE: the value set for the ADC in 0xffff8930 is in fact
-			 *       0b11, i.e. not CLKEXT (0b01); it is an undocumented
-			 *       hardware quirk.
-			 */
-			Devconnect(ADC, 0x00, CLKEXT, frequencySetting.prescale, NO_SHAKE);
+			FalconDevconnectExtClk(DMAPLAY, DAC, frequencySetting.prescale, NO_SHAKE);
+		} else {
+			Devconnect(DMAPLAY, DAC, frequencySetting.clk, frequencySetting.prescale, NO_SHAKE);
 		}
 		if (frequencySetting.prescale == CLKOLD)
 			Soundcmd(SETPRESCALE, frequencySetting.prescaleOld);
