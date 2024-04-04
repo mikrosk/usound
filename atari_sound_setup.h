@@ -577,6 +577,10 @@ int AtariSoundSetupInitXbios(const AudioSpec* desired, AudioSpec* obtained) {
 			if (frequencies[i].prescale != CLKOLD && !(snd & SND_16BIT))
 				continue;
 
+			// skip 6258 Hz if on Falcon
+			if (mch == MCH_FALCON && frequencies[i].prescale == CLKOLD && frequencies[i].prescaleOld == PRE1280)
+				continue;
+
 			// skip external clock frequencies if not present
 			if (frequencies[i].clkType != 0 && frequencies[i].clkType != extClock1 && frequencies[i].clkType != extClock2)
 				continue;
