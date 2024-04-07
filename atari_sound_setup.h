@@ -389,7 +389,7 @@ int AtariSoundSetupInitXbios(const AudioSpec* desired, AudioSpec* obtained) {
 	Getcookie(C__MCH, &mch);
 	mch >>= 16;
 
-	if (mch == MCH_FALCON || mch == MCH_ARANYM) {
+	if (mch == MCH_FALCON /*|| mch == MCH_ARANYM*/) {	/* hangs in Aranym */
 		if (!DetectFalconClocks(&extClock1, &extClock2)) {
 			AtariSoundSetupDeinitXbios();
 			return 0;
