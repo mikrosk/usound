@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Miro Kropacek <miro.kropacek@gmail.com>
+ * Copyright 2023-2024 Miro Kropacek <miro.kropacek@gmail.com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the “Software”), to deal in
@@ -71,6 +71,7 @@ int AtariSoundSetupDeinitXbios(void);
 
 /******************************************************************************/
 
+#ifndef __mcoldfire__
 static void FalconDevconnectExtClk(short src, short dst, short pre, short proto) {
 	register long srcPathclk __asm__("d0") = 0;
 
@@ -212,6 +213,7 @@ static int DetectFalconClocks(int *extClock1, int *extClock2) {
 
 	return 1;
 }
+#endif	/* !__mcoldfire__ */
 
 static int DetectFormat(
 	const int formatsAvailable[AudioFormatCount],
@@ -389,12 +391,14 @@ int AtariSoundSetupInitXbios(const AudioSpec* desired, AudioSpec* obtained) {
 	Getcookie(C__MCH, &mch);
 	mch >>= 16;
 
+#ifndef __mcoldfire__
 	if (mch == MCH_FALCON /*|| mch == MCH_ARANYM*/) {	/* hangs in Aranym */
 		if (!DetectFalconClocks(&extClock1, &extClock2)) {
 			AtariSoundSetupDeinitXbios();
 			return 0;
 		}
 	}
+#endif
 
 	snd = SND_PSG;
 	Getcookie(C__SND, &snd);
@@ -633,9 +637,12 @@ int AtariSoundSetupInitXbios(const AudioSpec* desired, AudioSpec* obtained) {
 				Gpio(GPIO_WRITE, 0x03);
 			}
 		}
+#ifndef __mcoldfire__
 		if ((mch == MCH_FALCON || mch == MCH_ARANYM) && frequencySetting.clk == CLKEXT) {
 			FalconDevconnectExtClk(DMAPLAY, DAC, frequencySetting.prescale, NO_SHAKE);
-		} else {
+		} else
+#endif
+		{
 			Devconnect(DMAPLAY, DAC, frequencySetting.clk, frequencySetting.prescale, NO_SHAKE);
 		}
 		if (frequencySetting.prescale == CLKOLD)
