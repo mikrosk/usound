@@ -1,4 +1,4 @@
-# atari_sound_setup
+# uSound
 
 This is a header-only implementation of a system-friendly audio XBIOS setup. It doesn't work out of the box on the STE/TT (unless equipped with EmuTOS) however it should work with most of the [XBIOS emulators](https://mikrosk.github.io/xbios) available.
 
