@@ -116,7 +116,7 @@ static void FalconDevconnectExtClk(short src, short dst, short pre, short proto)
 /*
  * Find out the speed of external clock
  * even for a dual external clock !!!
- * (FDI supported)
+ * (Steinberg's FDI and SoundPool's SPDIF are also supported)
  *
  * Copyright STGHOST/SECTOR ONE 1999
  */
