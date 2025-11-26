@@ -479,7 +479,9 @@ int AtariSoundSetupInitXbios(const AudioSpec* desired, AudioSpec* obtained) {
 	if (snd & SND_EXT) {
 		unsigned short bitDepth;
 
+#ifndef __mcoldfire__
 		has16bitMono = 1;
+#endif
 		hasFreeFrequency = 1;
 		if (extClock1 == 0 && extClock2 == 0) {
 			/* this is not really used (thanks to hasFreeFrequency) but may come in handy in the future */
@@ -653,7 +655,7 @@ int AtariSoundSetupInitXbios(const AudioSpec* desired, AudioSpec* obtained) {
 		&& obtained->format != AudioFormatSigned8
 		&& obtained->format != AudioFormatUnsigned8
 		&& !has16bitMono) {
-		/* Falcon lacks 16-bit mono */
+		/* Falcon and FireBee lack 16-bit mono */
 		obtained->channels = 2;
 	} else if (desired->channels == 2
 		&& (obtained->format == AudioFormatSigned8 || obtained->format == AudioFormatUnsigned8)
