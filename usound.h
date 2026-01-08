@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-2024 Miro Kropacek <miro.kropacek@gmail.com>
+ * Copyright 2023-2026 Miro Kropacek <miro.kropacek@gmail.com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the “Software”), to deal in
@@ -19,8 +19,8 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef ATARI_SOUND_SETUP_H
-#define ATARI_SOUND_SETUP_H
+#ifndef USOUND_H
+#define USOUND_H
 
 #include <mint/cookie.h>
 #include <mint/errno.h>
