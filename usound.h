@@ -370,6 +370,7 @@ USOUND_DEF int USoundInitXbios(const USoundSpec* desired, USoundSpec* obtained, 
 	long snd;
 	long mcsn = 0;
 	long stfa = 0;
+	long strk = 0;
 	int formatsAvailable[USoundFormatCount] = { 0 };
 	int has8bitStereo = 1;
 	int has16bitMono = 0;
@@ -536,6 +537,18 @@ USOUND_DEF int USoundInitXbios(const USoundSpec* desired, USoundSpec* obtained, 
 					formatsAvailable[USoundFormatUnsigned16LSB] = 1;
 			}
 		}
+	} else if (Getcookie(C_strk, &strk) == C_FOUND) {
+		if (extClock1 == 0 && extClock2 == 0) {
+			/* this is not really used (Devconnect() already offers those) but may come in handy in the future */
+			extClock1 = 1;	/* 22.5792 MHz (44100 Hz) */
+			extClock2 = 2;	/* 24.576 MHz (48000 Hz) */
+		}
+
+		formatsAvailable[AudioFormatSigned8]     = 1;
+		formatsAvailable[AudioFormatSigned16MSB] = 1;
+
+		// TODO: set the falcon compatible mode for Devconnect()
+		// TODO: maybe check for external source, too
 	} else {
 		/* by default assume just signed 8-bit and/or 16-bit big endian */
 		formatsAvailable[USoundFormatSigned8]     = (snd & SND_8BIT) != 0;
@@ -594,14 +607,26 @@ USOUND_DEF int USoundInitXbios(const USoundSpec* desired, USoundSpec* obtained, 
 			{ 16000, CLKEXT, CLK16K, -1, 2 },
 			{ 12000, CLKEXT, CLK12K, -1, 2 },
 			{  9600, CLKEXT, CLK10K, -1, 2 },
-			{  8000, CLKEXT, CLK8K,  -1, 2 }
+			{  8000, CLKEXT, CLK8K,  -1, 2 },
+			/* StarTrack, Falcon compatible mode */
+			{ 48000, 3,      3,      -1, 0 },
+			{ 44100, 3,      2,      -1, 0 },
+			{ 33075, 3,      11,     -1, 0 },
+			{ 32000, 3,      1,      -1, 0 },
+			{ 24000, 3,      10,     -1, 0 },
+			{ 22050, 3,      9,      -1, 0 },
+			{ 16537, 3,      8,      -1, 0 },
+			{ 16000, 3,      7,      -1, 0 },
+			{ 12000, 3,      6,      -1, 0 },
+			{ 11025, 3,      5,      -1, 0 },
+			{  8000, 3,      4,      -1, 0 }
 		};
 		struct FrequencySetting frequencySetting = { 0, 0, 0, 0, 0 };
 		int i;
 
 		for (i = 0; i < (int)(sizeof(frequencies) / sizeof(frequencies[0])); i++) {
 			/* assume that SND_16BIT implies availability of Falcon frequencies */
-			if (frequencies[i].prescale != CLKOLD && !(snd & SND_16BIT))
+			if (frequencies[i].prescale != CLKOLD && !(snd & SND_16BIT) && !strk)
 				continue;
 
 			/* skip 6258 Hz if on Falcon */
@@ -671,7 +696,7 @@ USOUND_DEF int USoundInitXbios(const USoundSpec* desired, USoundSpec* obtained, 
 		&& obtained->format != USoundFormatSigned8
 		&& obtained->format != USoundFormatUnsigned8
 		&& !has16bitMono) {
-		/* Falcon and FireBee lack 16-bit mono */
+		/* Falcon, FireBee and StarTrack lack 16-bit mono */
 		obtained->channels = 2;
 	} else if (desired->channels == 2
 		&& (obtained->format == USoundFormatSigned8 || obtained->format == USoundFormatUnsigned8)
