@@ -48,31 +48,31 @@
 #endif
 
 typedef enum {
-	AudioFormatSigned8,
-	AudioFormatSigned16LSB,
-	AudioFormatSigned16MSB,
-	AudioFormatUnsigned8,
-	AudioFormatUnsigned16LSB,
-	AudioFormatUnsigned16MSB,
+	USoundAudioFormatSigned8,
+	USoundAudioFormatSigned16LSB,
+	USoundAudioFormatSigned16MSB,
+	USoundAudioFormatUnsigned8,
+	USoundAudioFormatUnsigned16LSB,
+	USoundAudioFormatUnsigned16MSB,
 
-	AudioFormatCount
-} AudioFormat;
+	USoundAudioFormatCount
+} USoundAudioFormat;
 
 typedef struct {
-	uint16_t	frequency;	/* in samples per second */
-	uint8_t		channels;	/* 1: mono, 2: stereo */
-	AudioFormat	format;		/* see AudioFormat */
-	uint16_t	samples;	/* number of samples to process (2^N) */
-	uint32_t	size;		/* buffer size (calculated) */
-} AudioSpec;
+	uint16_t			frequency;	/* in samples per second */
+	uint8_t				channels;	/* 1: mono, 2: stereo */
+	USoundAudioFormat	format;		/* see USoundAudioFormat */
+	uint16_t			samples;	/* number of samples to process (2^N) */
+	uint32_t			size;		/* buffer size (calculated) */
+} USoundAudioSpec;
 
-int AtariSoundSetupInitXbios(const AudioSpec* desired, AudioSpec* obtained);
-int AtariSoundSetupDeinitXbios(void);
+int USoundInitXbios(const USoundAudioSpec* desired, USoundAudioSpec* obtained);
+int USoundDeinitXbios(void);
 
 /******************************************************************************/
 
 #ifndef __mcoldfire__
-static void FalconDevconnectExtClk(short src, short dst, short pre, short proto) {
+static void USoundFalconDevconnectExtClk(short src, short dst, short pre, short proto) {
 	register long srcPathclk __asm__("d0") = 0;
 
 	__asm__ volatile(
@@ -120,7 +120,7 @@ static void FalconDevconnectExtClk(short src, short dst, short pre, short proto)
  *
  * Copyright STGHOST/SECTOR ONE 1999
  */
-static long ExternalClockTest(void) {
+static long USoundExternalClockTest(void) {
 	register int ret __asm__("d0");
 
 	__asm__ volatile(
@@ -155,7 +155,7 @@ static long ExternalClockTest(void) {
 	return ret;
 }
 
-static int ClockType(long ticks)
+static int USoundClockType(long ticks)
 {
 	if (ticks <= 35)	/* [1-35] U [42-50] 49 kHz (type 0), 179 ms = 35 ticks */
 		return 0;
@@ -166,7 +166,7 @@ static int ClockType(long ticks)
 	return 1;			/* [39-41] 44.1kHz (type 1), 200 ms = 40 ticks */
 }
 
-static int DetectFalconClocks(int *extClock1, int *extClock2) {
+static int USoundDetectFalconClocks(int *extClock1, int *extClock2) {
 	const int TEST_BUFSIZE = 8820;
 	char* bufs;
 	char* bufe;
@@ -181,7 +181,7 @@ static int DetectFalconClocks(int *extClock1, int *extClock2) {
 	memset(bufs, 0, TEST_BUFSIZE);
 
 	Sndstatus(SND_RESET);
-	FalconDevconnectExtClk(DMAPLAY, DAC, CLK50K, NO_SHAKE);
+	USoundFalconDevconnectExtClk(DMAPLAY, DAC, CLK50K, NO_SHAKE);
 	Setmode(MODE_MONO);
 	Soundcmd(ADDERIN, MATIN);
 	Setbuffer(SR_PLAY, bufs, bufe);
@@ -199,7 +199,7 @@ static int DetectFalconClocks(int *extClock1, int *extClock2) {
 	 * bit #2: 0 (no FDI reset)
 	 */
 	Gpio(GPIO_WRITE, 0x03);
-	*extClock2 = ClockType(Supexec(ExternalClockTest));
+	*extClock2 = USoundClockType(Supexec(USoundExternalClockTest));
 
 	/*
 	 * bit #0: 0 (external clock 1)
@@ -207,7 +207,7 @@ static int DetectFalconClocks(int *extClock1, int *extClock2) {
 	 * bit #2: 0 (no FDI reset)
 	 */
 	Gpio(GPIO_WRITE, 0x02);
-	*extClock1 = ClockType(Supexec(ExternalClockTest));
+	*extClock1 = USoundClockType(Supexec(USoundExternalClockTest));
 
 	Mfree(bufs);
 
@@ -215,10 +215,10 @@ static int DetectFalconClocks(int *extClock1, int *extClock2) {
 }
 #endif	/* !__mcoldfire__ */
 
-static int DetectFormat(
-	const int formatsAvailable[AudioFormatCount],
-	const AudioSpec* desired,
-	AudioSpec* obtained) {
+static int USoundDetectFormat(
+	const int formatsAvailable[USoundAudioFormatCount],
+	const USoundAudioSpec* desired,
+	USoundAudioSpec* obtained) {
 	int found;
 	int i;
 
@@ -230,63 +230,63 @@ static int DetectFormat(
 	found = 0;
 
 	/* prefer the same bit-depth & endianness */
-	for (i = 0; !found && i < AudioFormatCount; i++) {
+	for (i = 0; !found && i < USoundAudioFormatCount; i++) {
 		if (!formatsAvailable[i])
 			continue;
 
 		switch (desired->format) {
-			case AudioFormatSigned8:
-			case AudioFormatUnsigned8:
-				if (i == AudioFormatUnsigned8 || i == AudioFormatSigned8) {
-					obtained->format = (AudioFormat)i;
+			case USoundAudioFormatSigned8:
+			case USoundAudioFormatUnsigned8:
+				if (i == USoundAudioFormatUnsigned8 || i == USoundAudioFormatSigned8) {
+					obtained->format = (USoundAudioFormat)i;
 					found = 1;
 				}
 				break;
 
-			case AudioFormatSigned16LSB:
-			case AudioFormatUnsigned16LSB:
-				if (i == AudioFormatUnsigned16LSB || i == AudioFormatSigned16LSB) {
-					obtained->format = (AudioFormat)i;
+			case USoundAudioFormatSigned16LSB:
+			case USoundAudioFormatUnsigned16LSB:
+				if (i == USoundAudioFormatUnsigned16LSB || i == USoundAudioFormatSigned16LSB) {
+					obtained->format = (USoundAudioFormat)i;
 					found = 1;
 				}
 				break;
 
-			case AudioFormatSigned16MSB:
-			case AudioFormatUnsigned16MSB:
-				if (i == AudioFormatUnsigned16MSB || i == AudioFormatSigned16MSB) {
-					obtained->format = (AudioFormat)i;
+			case USoundAudioFormatSigned16MSB:
+			case USoundAudioFormatUnsigned16MSB:
+				if (i == USoundAudioFormatUnsigned16MSB || i == USoundAudioFormatSigned16MSB) {
+					obtained->format = (USoundAudioFormat)i;
 					found = 1;
 				}
 				break;
-			case AudioFormatCount:
+			case USoundAudioFormatCount:
 				break;
 		}
 	}
 
 	/* prefer the same sign */
-	for (i = 0; !found && i < AudioFormatCount; i++) {
+	for (i = 0; !found && i < USoundAudioFormatCount; i++) {
 		if (!formatsAvailable[i])
 			continue;
 
 		switch (desired->format) {
-			case AudioFormatSigned8:
-			case AudioFormatSigned16LSB:
-			case AudioFormatSigned16MSB:
-				if (i == AudioFormatSigned16MSB || i == AudioFormatSigned16LSB) {
-					obtained->format = (AudioFormat)i;
+			case USoundAudioFormatSigned8:
+			case USoundAudioFormatSigned16LSB:
+			case USoundAudioFormatSigned16MSB:
+				if (i == USoundAudioFormatSigned16MSB || i == USoundAudioFormatSigned16LSB) {
+					obtained->format = (USoundAudioFormat)i;
 					found = 1;
 				}
 				break;
 
-			case AudioFormatUnsigned8:
-			case AudioFormatUnsigned16LSB:
-			case AudioFormatUnsigned16MSB:
-				if (i == AudioFormatUnsigned16MSB || i == AudioFormatUnsigned16LSB) {
-					obtained->format = (AudioFormat)i;
+			case USoundAudioFormatUnsigned8:
+			case USoundAudioFormatUnsigned16LSB:
+			case USoundAudioFormatUnsigned16MSB:
+				if (i == USoundAudioFormatUnsigned16MSB || i == USoundAudioFormatUnsigned16LSB) {
+					obtained->format = (USoundAudioFormat)i;
 					found = 1;
 				}
 				break;
-			case AudioFormatCount:
+			case USoundAudioFormatCount:
 				break;
 		}
 	}
@@ -296,35 +296,35 @@ static int DetectFormat(
 	 * 	- desired 8-bit, available 16-bit (non-matching sign)
 	 * 	- desired 16-bit, available 16-bit (non-matching sign & endianness)
 	 */
-	for (i = 0; !found && i < AudioFormatCount; i++) {
+	for (i = 0; !found && i < USoundAudioFormatCount; i++) {
 		if (!formatsAvailable[i])
 			continue;
 
 		/* take the first available 16-bit format */
-		if (i != AudioFormatSigned8 && i != AudioFormatUnsigned8) {
-			obtained->format = (AudioFormat)i;
+		if (i != USoundAudioFormatSigned8 && i != USoundAudioFormatUnsigned8) {
+			obtained->format = (USoundAudioFormat)i;
 			found = 1;
 		}
 	}
 
 	if (!found) {
 		/* prefer the same sign while downgrading to 8-bit */
-		if (formatsAvailable[AudioFormatSigned8]
-			&& (desired->format == AudioFormatSigned16LSB
-				|| desired->format == AudioFormatSigned16MSB)) {
-			obtained->format = AudioFormatSigned8;
+		if (formatsAvailable[USoundAudioFormatSigned8]
+			&& (desired->format == USoundAudioFormatSigned16LSB
+				|| desired->format == USoundAudioFormatSigned16MSB)) {
+			obtained->format = USoundAudioFormatSigned8;
 			found = 1;
-		} else if (formatsAvailable[AudioFormatUnsigned8]
-			&& (desired->format == AudioFormatUnsigned16LSB
-				|| desired->format == AudioFormatUnsigned16MSB)) {
-			obtained->format = AudioFormatUnsigned8;
+		} else if (formatsAvailable[USoundAudioFormatUnsigned8]
+			&& (desired->format == USoundAudioFormatUnsigned16LSB
+				|| desired->format == USoundAudioFormatUnsigned16MSB)) {
+			obtained->format = USoundAudioFormatUnsigned8;
 			found = 1;
 		}
 
-		for (i = 0; !found && i < AudioFormatCount; i++) {
+		for (i = 0; !found && i < USoundAudioFormatCount; i++) {
 			/* take the first available (8-bit) format */
 			if (formatsAvailable[i]) {
-				obtained->format = (AudioFormat)i;
+				obtained->format = (USoundAudioFormat)i;
 				found = 1;
 			}
 		}
@@ -343,7 +343,7 @@ static int oldAdderIn;
 static int oldAdcInput;
 static int oldPrescale;
 
-int AtariSoundSetupInitXbios(const AudioSpec* desired, AudioSpec* obtained) {
+int USoundInitXbios(const USoundAudioSpec* desired, USoundAudioSpec* obtained) {
 	enum {
 		MCH_ST = 0,
 		MCH_STE,
@@ -356,7 +356,7 @@ int AtariSoundSetupInitXbios(const AudioSpec* desired, AudioSpec* obtained) {
 	long snd;
 	long mcsn = 0;
 	long stfa = 0;
-	int formatsAvailable[AudioFormatCount] = { 0 };
+	int formatsAvailable[USoundAudioFormatCount] = { 0 };
 	int has8bitStereo = 1;
 	int has16bitMono = 0;
 	int hasFreeFrequency = 0;
@@ -368,7 +368,7 @@ int AtariSoundSetupInitXbios(const AudioSpec* desired, AudioSpec* obtained) {
 
 	if (desired->frequency == 0 || desired->frequency > 64000
 		|| desired->channels == 0 || desired->channels > 2
-		|| desired->format >= AudioFormatCount
+		|| desired->format >= USoundAudioFormatCount
 		|| desired->samples == 0)
 		return 0;
 
@@ -393,8 +393,8 @@ int AtariSoundSetupInitXbios(const AudioSpec* desired, AudioSpec* obtained) {
 
 #ifndef __mcoldfire__
 	if (mch == MCH_FALCON /*|| mch == MCH_ARANYM*/) {	/* hangs in Aranym */
-		if (!DetectFalconClocks(&extClock1, &extClock2)) {
-			AtariSoundSetupDeinitXbios();
+		if (!USoundDetectFalconClocks(&extClock1, &extClock2)) {
+			USoundDeinitXbios();
 			return 0;
 		}
 	}
@@ -437,7 +437,7 @@ int AtariSoundSetupInitXbios(const AudioSpec* desired, AudioSpec* obtained) {
 	}
 
 	if (!(snd & (SND_8BIT | SND_16BIT))) {
-		AtariSoundSetupDeinitXbios();
+		USoundDeinitXbios();
 		return 0;
 	}
 
@@ -496,10 +496,10 @@ int AtariSoundSetupInitXbios(const AudioSpec* desired, AudioSpec* obtained) {
 			unsigned short formats = Sndstatus(8);
 
 			if (formats & SND_FORMATSIGNED)
-				formatsAvailable[AudioFormatSigned8]   = 1;
+				formatsAvailable[USoundAudioFormatSigned8]   = 1;
 
 			if (formats & SND_FORMATUNSIGNED)
-				formatsAvailable[AudioFormatUnsigned8] = 1;
+				formatsAvailable[USoundAudioFormatUnsigned8] = 1;
 		}
 
 		if (bitDepth & 0x02) {
@@ -508,26 +508,26 @@ int AtariSoundSetupInitXbios(const AudioSpec* desired, AudioSpec* obtained) {
 
 			if (formats & SND_FORMATSIGNED) {
 				if (formats & SND_FORMATBIGENDIAN)
-					formatsAvailable[AudioFormatSigned16MSB] = 1;
+					formatsAvailable[USoundAudioFormatSigned16MSB] = 1;
 				if (formats & SND_FORMATLITTLEENDIAN)
-					formatsAvailable[AudioFormatSigned16LSB] = 1;
+					formatsAvailable[USoundAudioFormatSigned16LSB] = 1;
 			}
 
 			if (formats & SND_FORMATUNSIGNED) {
 				if (formats & SND_FORMATBIGENDIAN)
-					formatsAvailable[AudioFormatUnsigned16MSB] = 1;
+					formatsAvailable[USoundAudioFormatUnsigned16MSB] = 1;
 				if (formats & SND_FORMATLITTLEENDIAN)
-					formatsAvailable[AudioFormatUnsigned16LSB] = 1;
+					formatsAvailable[USoundAudioFormatUnsigned16LSB] = 1;
 			}
 		}
 	} else {
 		/* by default assume just signed 8-bit and/or 16-bit big endian */
-		formatsAvailable[AudioFormatSigned8]     = (snd & SND_8BIT) != 0;
-		formatsAvailable[AudioFormatSigned16MSB] = (snd & SND_16BIT) != 0;
+		formatsAvailable[USoundAudioFormatSigned8]     = (snd & SND_8BIT) != 0;
+		formatsAvailable[USoundAudioFormatSigned16MSB] = (snd & SND_16BIT) != 0;
 	}
 
-	if (!DetectFormat(formatsAvailable, desired, obtained)) {
-		AtariSoundSetupDeinitXbios();
+	if (!USoundDetectFormat(formatsAvailable, desired, obtained)) {
+		USoundDeinitXbios();
 		return 0;
 	}
 
@@ -626,7 +626,7 @@ int AtariSoundSetupInitXbios(const AudioSpec* desired, AudioSpec* obtained) {
 		}
 
 		if (!frequencySetting.frequency) {
-			AtariSoundSetupDeinitXbios();
+			USoundDeinitXbios();
 			return 0;
 		}
 
@@ -641,7 +641,7 @@ int AtariSoundSetupInitXbios(const AudioSpec* desired, AudioSpec* obtained) {
 		}
 #ifndef __mcoldfire__
 		if ((mch == MCH_FALCON || mch == MCH_ARANYM) && frequencySetting.clk == CLKEXT) {
-			FalconDevconnectExtClk(DMAPLAY, DAC, frequencySetting.prescale, NO_SHAKE);
+			USoundFalconDevconnectExtClk(DMAPLAY, DAC, frequencySetting.prescale, NO_SHAKE);
 		} else
 #endif
 		{
@@ -652,13 +652,13 @@ int AtariSoundSetupInitXbios(const AudioSpec* desired, AudioSpec* obtained) {
 	}
 
 	if (desired->channels == 1
-		&& obtained->format != AudioFormatSigned8
-		&& obtained->format != AudioFormatUnsigned8
+		&& obtained->format != USoundAudioFormatSigned8
+		&& obtained->format != USoundAudioFormatUnsigned8
 		&& !has16bitMono) {
 		/* Falcon and FireBee lack 16-bit mono */
 		obtained->channels = 2;
 	} else if (desired->channels == 2
-		&& (obtained->format == AudioFormatSigned8 || obtained->format == AudioFormatUnsigned8)
+		&& (obtained->format == USoundAudioFormatSigned8 || obtained->format == USoundAudioFormatUnsigned8)
 		&& !has8bitStereo) {
 		/* ST emulation lacks 8-bit stereo */
 		obtained->channels = 1;
@@ -667,48 +667,48 @@ int AtariSoundSetupInitXbios(const AudioSpec* desired, AudioSpec* obtained) {
 	}
 
 	switch (obtained->format) {
-		case AudioFormatSigned8:
-		case AudioFormatUnsigned8:
+		case USoundAudioFormatSigned8:
+		case USoundAudioFormatUnsigned8:
 			if (obtained->channels == 1)
 				Setmode(MODE_MONO);
 			else
 				Setmode(MODE_STEREO8);
 			break;
 
-		case AudioFormatSigned16LSB:
-		case AudioFormatSigned16MSB:
-		case AudioFormatUnsigned16LSB:
-		case AudioFormatUnsigned16MSB:
+		case USoundAudioFormatSigned16LSB:
+		case USoundAudioFormatSigned16MSB:
+		case USoundAudioFormatUnsigned16LSB:
+		case USoundAudioFormatUnsigned16MSB:
 			if (obtained->channels == 1)
 				Setmode(MODE_MONO16);
 			else
 				Setmode(MODE_STEREO16);
 			break;
-		case AudioFormatCount:
+		case USoundAudioFormatCount:
 			break;
 	}
 
 	if (snd & SND_EXT) {
 		switch (obtained->format) {
-			case AudioFormatSigned8:
+			case USoundAudioFormatSigned8:
 				Soundcmd(8, SND_FORMATSIGNED);
 				break;
-			case AudioFormatUnsigned8:
+			case USoundAudioFormatUnsigned8:
 				Soundcmd(8, SND_FORMATUNSIGNED);
 				break;
-			case AudioFormatSigned16LSB:
+			case USoundAudioFormatSigned16LSB:
 				Soundcmd(9, SND_FORMATSIGNED | SND_FORMATLITTLEENDIAN);
 				break;
-			case AudioFormatSigned16MSB:
+			case USoundAudioFormatSigned16MSB:
 				Soundcmd(9, SND_FORMATSIGNED | SND_FORMATBIGENDIAN);
 				break;
-			case AudioFormatUnsigned16LSB:
+			case USoundAudioFormatUnsigned16LSB:
 				Soundcmd(9, SND_FORMATUNSIGNED | SND_FORMATLITTLEENDIAN);
 				break;
-			case AudioFormatUnsigned16MSB:
+			case USoundAudioFormatUnsigned16MSB:
 				Soundcmd(9, SND_FORMATUNSIGNED | SND_FORMATBIGENDIAN);
 				break;
-			case AudioFormatCount:
+			case USoundAudioFormatCount:
 				break;
 		}
 	}
@@ -721,8 +721,8 @@ int AtariSoundSetupInitXbios(const AudioSpec* desired, AudioSpec* obtained) {
 		obtained->samples >>= 1;
 
 	obtained->size = obtained->samples * obtained->channels;
-	if (obtained->format != AudioFormatSigned8
-		&& obtained->format != AudioFormatUnsigned8) {
+	if (obtained->format != USoundAudioFormatSigned8
+		&& obtained->format != USoundAudioFormatUnsigned8) {
 		/* 16-bit samples */
 		obtained->size *= 2;
 	}
@@ -730,7 +730,7 @@ int AtariSoundSetupInitXbios(const AudioSpec* desired, AudioSpec* obtained) {
 	return 1;
 }
 
-int AtariSoundSetupDeinitXbios(void) {
+int USoundDeinitXbios(void) {
 	if (locked) {
 		locked = 0;
 
