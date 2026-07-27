@@ -72,27 +72,28 @@ int USoundDeinitXbios(void);
 /******************************************************************************/
 
 #ifndef __mcoldfire__
-static void USoundFalconDevconnectExtClk(short src, short dst, short pre, short proto) {
-	register long srcPathclk __asm__("d0") = 0;
+/* Set src_pathclk to the external clock, return recv_pathclk */
+static long USoundSetSrcExtPathclk(void) {
+	register long recvPathclk __asm__("d0");
 
 	__asm__ volatile(
-		"	bra.b	go\n"
-		"\n"
-		"set_src_ext_pathclk:\n"
 		"	and.w	#0x0FFF,0xFFFF8930:w\n"
 		/* Done only in TOS 4.04 */
 		"	or.w	#0x6000,0xFFFF8930:w\n"
-		/* Devconnect() on TOS 4.0x needs content of src_pathclk in d2 due to a bug */
 		"	move.w	0xFFFF8932:w,%%d0\n"
-		"	rts\n"
-		"\n"
-		/* Supexec() */
-		"go:\n"
-		"	pea		(set_src_ext_pathclk,%%pc)\n"
-		"	move.w	#38,%%sp@-\n"
-		"	trap	#14\n"
-		"	addq.l	#6,%%sp\n"
-		"\n"
+
+		: "=r"(recvPathclk)	/* outputs */
+		: /* inputs */
+		: __CLOBBER_RETURN("d0") "cc" AND_MEMORY
+	);
+
+	return recvPathclk;
+}
+
+static void USoundFalconDevconnectExtClk(short src, short dst, short pre, short proto) {
+	const long recvPathclk = Supexec(USoundSetSrcExtPathclk);
+
+	__asm__ volatile(
 		/* Devconnect() */
 		"	move.w	%5,%%sp@-\n"
 		"	move.w	%4,%%sp@-\n"
@@ -100,14 +101,14 @@ static void USoundFalconDevconnectExtClk(short src, short dst, short pre, short 
 		"	move.w	%2,%%sp@-\n"
 		"	move.w	%1,%%sp@-\n"
 		"	move.w	#139,%%sp@-\n"
-		/* Prepare d2.w */
+		/* Devconnect() on TOS 4.0x needs content of recv_pathclk in d2 due to a bug */
 		"	move.w	%0,%%d2\n"
 		"	trap	#14\n"
 		"	lea		(12,%%sp),%%sp\n"
 
 		: /* outputs */
-		: "r"(srcPathclk), "ri"(src), "ri"(dst), "ri"(CLKEXT), "ri"(pre), "ri"(proto)	/* inputs */
-		: __CLOBBER_RETURN("d0") "d1", "d2", "a0", "a1", "a2", "cc" AND_MEMORY
+		: "r"(recvPathclk), "ri"(src), "ri"(dst), "ri"(CLKEXT), "ri"(pre), "ri"(proto)	/* inputs */
+		: "d0", "d1", "d2", "a0", "a1", "a2", "cc" AND_MEMORY
 	);
 
 	/* Return value of Devconnect() is broken on Falcon */
@@ -131,18 +132,18 @@ static long USoundExternalClockTest(void) {
 		"	moveq	#50,%%d1\n"
 		"	add.l	(%%a0),%%d2\n"
 		"	add.l	%%d2,%%d1\n"
-		"tstart:\n"
+		"tstart%=:\n"
 		"	cmp.l	(%%a0),%%d2\n"	/* time to start ? */
-		"	bne.s	tstart\n"
+		"	bne.s	tstart%=\n"
 		"	move.b	#1,(%%a1)\n"	/* SB_PLA_ENA; start replay */
 		"	nop\n"
-		"tloop:\n"
+		"tloop%=:\n"
 		"	tst.b	(%%a1)\n"		/* end of buffer ? */
-		"	beq.s	tstop\n"
+		"	beq.s	tstop%=\n"
 		"	cmp.l	(%%a0),%%d1\n"	/* time limit reached ? */
-		"	bne.s	tloop\n"
+		"	bne.s	tloop%=\n"
 		"	clr.b	(%%a1)\n"		/* turn off replay */
-		"tstop:\n"
+		"tstop%=:\n"
 		"	move.l	(%%a0),%%d0\n"	/* stop time */
 		"	sub.l	%%d2,%%d0\n"	/* timelength */
 		"	move.w	#0x2300,%%sr\n"
