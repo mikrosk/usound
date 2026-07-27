@@ -20,7 +20,7 @@ typedef struct {
 	uint8_t				channels;	/* 1: mono, 2: stereo */
 	USoundAudioFormat	format;		/* see USoundAudioFormat */
 	uint16_t			samples;	/* number of samples to process (2^N) */
-	uint16_t			size;		/* buffer size (calculated ) */
+	uint32_t			size;		/* buffer size (calculated ) */
 } USoundAudioSpec;
 
 int USoundInitXbios(const USoundAudioSpec* desired, USoundAudioSpec* obtained);
