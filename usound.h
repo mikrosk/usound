@@ -22,6 +22,8 @@
 #ifndef USOUND_H
 #define USOUND_H
 
+#define USOUND_VERSION 2
+
 #include <mint/cookie.h>
 #include <mint/errno.h>
 #include <mint/falcon.h>
