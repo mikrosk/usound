@@ -21,9 +21,9 @@ typedef struct {
 	USoundFormat	format;		/* see USoundFormat */
 	uint16_t		samples;	/* number of samples to process (2^N) */
 	uint32_t		size;		/* buffer size (calculated ) */
-} USoundAudioSpec;
+} USoundSpec;
 
-int USoundInitXbios(const USoundAudioSpec* desired, USoundAudioSpec* obtained);
+int USoundInitXbios(const USoundSpec* desired, USoundSpec* obtained);
 int USoundDeinitXbios();
 ```
 If you worked with SDL-1.2's [SDL_OpenAudio](https://www.libsdl.org/release/SDL-1.2.15/docs/html/sdlopenaudio.html) this should feel familiar. The biggest difference here is that the `obtained` parameter is mandatory, i.e. built-in conversion is not available.

@@ -64,9 +64,9 @@ typedef struct {
 	USoundFormat	format;		/* see USoundFormat */
 	uint16_t		samples;	/* number of samples to process (2^N) */
 	uint32_t		size;		/* buffer size (calculated) */
-} USoundAudioSpec;
+} USoundSpec;
 
-int USoundInitXbios(const USoundAudioSpec* desired, USoundAudioSpec* obtained);
+int USoundInitXbios(const USoundSpec* desired, USoundSpec* obtained);
 int USoundDeinitXbios(void);
 
 /******************************************************************************/
@@ -218,8 +218,8 @@ static int USoundDetectFalconClocks(int *extClock1, int *extClock2) {
 
 static int USoundDetectFormat(
 	const int formatsAvailable[USoundFormatCount],
-	const USoundAudioSpec* desired,
-	USoundAudioSpec* obtained) {
+	const USoundSpec* desired,
+	USoundSpec* obtained) {
 	int found;
 	int i;
 
@@ -344,7 +344,7 @@ static int oldAdderIn;
 static int oldAdcInput;
 static int oldPrescale;
 
-int USoundInitXbios(const USoundAudioSpec* desired, USoundAudioSpec* obtained) {
+int USoundInitXbios(const USoundSpec* desired, USoundSpec* obtained) {
 	enum {
 		MCH_ST = 0,
 		MCH_STE,
