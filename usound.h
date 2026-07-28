@@ -66,8 +66,29 @@ typedef struct {
 	uint32_t		size;		/* buffer size (calculated) */
 } USoundSpec;
 
-int USoundInitXbios(const USoundSpec* desired, USoundSpec* obtained);
-int USoundDeinitXbios(void);
+typedef struct {
+	int locked;
+	int oldGpio;
+	int oldLtAtten;
+	int oldRtAtten;
+	int oldLtGain;
+	int oldRtGain;
+	int oldAdderIn;
+	int oldAdcInput;
+	int oldPrescale;
+} USoundContext;
+
+#ifndef USOUND_DEF
+#ifdef __GNUC__
+/* a translation unit doesn't have to use both of them */
+#define USOUND_DEF	static __attribute__((__unused__))
+#else
+#define USOUND_DEF	static
+#endif
+#endif	/* USOUND_DEF */
+
+USOUND_DEF int USoundInitXbios(const USoundSpec* desired, USoundSpec* obtained, USoundContext* context);
+USOUND_DEF int USoundDeinitXbios(USoundContext* context);
 
 /******************************************************************************/
 
@@ -334,17 +355,7 @@ static int USoundDetectFormat(
 	return found;
 }
 
-static int locked;
-static int oldGpio;
-static int oldLtAtten;
-static int oldRtAtten;
-static int oldLtGain;
-static int oldRtGain;
-static int oldAdderIn;
-static int oldAdcInput;
-static int oldPrescale;
-
-int USoundInitXbios(const USoundSpec* desired, USoundSpec* obtained) {
+USOUND_DEF int USoundInitXbios(const USoundSpec* desired, USoundSpec* obtained, USoundContext* context) {
 	enum {
 		MCH_ST = 0,
 		MCH_STE,
@@ -364,8 +375,10 @@ int USoundInitXbios(const USoundSpec* desired, USoundSpec* obtained) {
 	int extClock1 = 0;
 	int extClock2 = 0;
 
-	if (!desired || !obtained)
+	if (!desired || !obtained || !context)
 		return 0;
+
+	memset(context, 0, sizeof(*context));
 
 	if (desired->frequency == 0 || desired->frequency > 64000
 		|| desired->channels == 0 || desired->channels > 2
@@ -377,15 +390,15 @@ int USoundInitXbios(const USoundSpec* desired, USoundSpec* obtained) {
 	if (Locksnd() != 1)
 		return 0;
 
-	locked = 1;
-	oldLtAtten = Soundcmd(LTATTEN, SND_INQUIRE);
-	oldRtAtten = Soundcmd(RTATTEN, SND_INQUIRE);
-	oldLtGain = Soundcmd(LTGAIN, SND_INQUIRE);
-	oldRtGain = Soundcmd(RTGAIN, SND_INQUIRE);
-	oldAdderIn = Soundcmd(ADDERIN, SND_INQUIRE);
-	oldAdcInput = Soundcmd(ADCINPUT, SND_INQUIRE);
-	oldPrescale = Soundcmd(SETPRESCALE, SND_INQUIRE);
-	oldGpio = Gpio(GPIO_READ, SND_INQUIRE);	/* 'data' is ignored */
+	context->locked = 1;
+	context->oldLtAtten = Soundcmd(LTATTEN, SND_INQUIRE);
+	context->oldRtAtten = Soundcmd(RTATTEN, SND_INQUIRE);
+	context->oldLtGain = Soundcmd(LTGAIN, SND_INQUIRE);
+	context->oldRtGain = Soundcmd(RTGAIN, SND_INQUIRE);
+	context->oldAdderIn = Soundcmd(ADDERIN, SND_INQUIRE);
+	context->oldAdcInput = Soundcmd(ADCINPUT, SND_INQUIRE);
+	context->oldPrescale = Soundcmd(SETPRESCALE, SND_INQUIRE);
+	context->oldGpio = Gpio(GPIO_READ, SND_INQUIRE);	/* 'data' is ignored */
 	/* we could save also SND_EXT Soundcmd() modes here but that's perhaps overkill */
 
 	mch = MCH_ST<<16;
@@ -395,7 +408,7 @@ int USoundInitXbios(const USoundSpec* desired, USoundSpec* obtained) {
 #ifndef __mcoldfire__
 	if (mch == MCH_FALCON /*|| mch == MCH_ARANYM*/) {	/* hangs in Aranym */
 		if (!USoundDetectFalconClocks(&extClock1, &extClock2)) {
-			USoundDeinitXbios();
+			USoundDeinitXbios(context);
 			return 0;
 		}
 	}
@@ -438,7 +451,7 @@ int USoundInitXbios(const USoundSpec* desired, USoundSpec* obtained) {
 	}
 
 	if (!(snd & (SND_8BIT | SND_16BIT))) {
-		USoundDeinitXbios();
+		USoundDeinitXbios(context);
 		return 0;
 	}
 
@@ -528,7 +541,7 @@ int USoundInitXbios(const USoundSpec* desired, USoundSpec* obtained) {
 	}
 
 	if (!USoundDetectFormat(formatsAvailable, desired, obtained)) {
-		USoundDeinitXbios();
+		USoundDeinitXbios(context);
 		return 0;
 	}
 
@@ -627,7 +640,7 @@ int USoundInitXbios(const USoundSpec* desired, USoundSpec* obtained) {
 		}
 
 		if (!frequencySetting.frequency) {
-			USoundDeinitXbios();
+			USoundDeinitXbios(context);
 			return 0;
 		}
 
@@ -731,22 +744,22 @@ int USoundInitXbios(const USoundSpec* desired, USoundSpec* obtained) {
 	return 1;
 }
 
-int USoundDeinitXbios(void) {
-	if (locked) {
-		locked = 0;
+USOUND_DEF int USoundDeinitXbios(USoundContext* context) {
+	if (context && context->locked) {
+		context->locked = 0;
 
 		/* for cases when playback is still running */
 		Buffoper(0x00);
 		Sndstatus(SND_RESET);
 
-		Gpio(GPIO_WRITE, oldGpio);
-		Soundcmd(LTATTEN, oldLtAtten);
-		Soundcmd(RTATTEN, oldRtAtten);
-		Soundcmd(LTGAIN, oldLtGain);
-		Soundcmd(RTGAIN, oldRtGain);
-		Soundcmd(ADDERIN, oldAdderIn);
-		Soundcmd(ADCINPUT, oldAdcInput);
-		Soundcmd(SETPRESCALE, oldPrescale);
+		Gpio(GPIO_WRITE, context->oldGpio);
+		Soundcmd(LTATTEN, context->oldLtAtten);
+		Soundcmd(RTATTEN, context->oldRtAtten);
+		Soundcmd(LTGAIN, context->oldLtGain);
+		Soundcmd(RTGAIN, context->oldRtGain);
+		Soundcmd(ADDERIN, context->oldAdderIn);
+		Soundcmd(ADCINPUT, context->oldAdcInput);
+		Soundcmd(SETPRESCALE, context->oldPrescale);
 
 		Unlocksnd();
 		return 1;
