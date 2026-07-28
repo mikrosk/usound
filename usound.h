@@ -48,22 +48,22 @@
 #endif
 
 typedef enum {
-	USoundAudioFormatSigned8,
-	USoundAudioFormatSigned16LSB,
-	USoundAudioFormatSigned16MSB,
-	USoundAudioFormatUnsigned8,
-	USoundAudioFormatUnsigned16LSB,
-	USoundAudioFormatUnsigned16MSB,
+	USoundFormatSigned8,
+	USoundFormatSigned16LSB,
+	USoundFormatSigned16MSB,
+	USoundFormatUnsigned8,
+	USoundFormatUnsigned16LSB,
+	USoundFormatUnsigned16MSB,
 
-	USoundAudioFormatCount
-} USoundAudioFormat;
+	USoundFormatCount
+} USoundFormat;
 
 typedef struct {
-	uint16_t			frequency;	/* in samples per second */
-	uint8_t				channels;	/* 1: mono, 2: stereo */
-	USoundAudioFormat	format;		/* see USoundAudioFormat */
-	uint16_t			samples;	/* number of samples to process (2^N) */
-	uint32_t			size;		/* buffer size (calculated) */
+	uint16_t		frequency;	/* in samples per second */
+	uint8_t			channels;	/* 1: mono, 2: stereo */
+	USoundFormat	format;		/* see USoundFormat */
+	uint16_t		samples;	/* number of samples to process (2^N) */
+	uint32_t		size;		/* buffer size (calculated) */
 } USoundAudioSpec;
 
 int USoundInitXbios(const USoundAudioSpec* desired, USoundAudioSpec* obtained);
@@ -217,7 +217,7 @@ static int USoundDetectFalconClocks(int *extClock1, int *extClock2) {
 #endif	/* !__mcoldfire__ */
 
 static int USoundDetectFormat(
-	const int formatsAvailable[USoundAudioFormatCount],
+	const int formatsAvailable[USoundFormatCount],
 	const USoundAudioSpec* desired,
 	USoundAudioSpec* obtained) {
 	int found;
@@ -231,63 +231,63 @@ static int USoundDetectFormat(
 	found = 0;
 
 	/* prefer the same bit-depth & endianness */
-	for (i = 0; !found && i < USoundAudioFormatCount; i++) {
+	for (i = 0; !found && i < USoundFormatCount; i++) {
 		if (!formatsAvailable[i])
 			continue;
 
 		switch (desired->format) {
-			case USoundAudioFormatSigned8:
-			case USoundAudioFormatUnsigned8:
-				if (i == USoundAudioFormatUnsigned8 || i == USoundAudioFormatSigned8) {
-					obtained->format = (USoundAudioFormat)i;
+			case USoundFormatSigned8:
+			case USoundFormatUnsigned8:
+				if (i == USoundFormatUnsigned8 || i == USoundFormatSigned8) {
+					obtained->format = (USoundFormat)i;
 					found = 1;
 				}
 				break;
 
-			case USoundAudioFormatSigned16LSB:
-			case USoundAudioFormatUnsigned16LSB:
-				if (i == USoundAudioFormatUnsigned16LSB || i == USoundAudioFormatSigned16LSB) {
-					obtained->format = (USoundAudioFormat)i;
+			case USoundFormatSigned16LSB:
+			case USoundFormatUnsigned16LSB:
+				if (i == USoundFormatUnsigned16LSB || i == USoundFormatSigned16LSB) {
+					obtained->format = (USoundFormat)i;
 					found = 1;
 				}
 				break;
 
-			case USoundAudioFormatSigned16MSB:
-			case USoundAudioFormatUnsigned16MSB:
-				if (i == USoundAudioFormatUnsigned16MSB || i == USoundAudioFormatSigned16MSB) {
-					obtained->format = (USoundAudioFormat)i;
+			case USoundFormatSigned16MSB:
+			case USoundFormatUnsigned16MSB:
+				if (i == USoundFormatUnsigned16MSB || i == USoundFormatSigned16MSB) {
+					obtained->format = (USoundFormat)i;
 					found = 1;
 				}
 				break;
-			case USoundAudioFormatCount:
+			case USoundFormatCount:
 				break;
 		}
 	}
 
 	/* prefer the same sign */
-	for (i = 0; !found && i < USoundAudioFormatCount; i++) {
+	for (i = 0; !found && i < USoundFormatCount; i++) {
 		if (!formatsAvailable[i])
 			continue;
 
 		switch (desired->format) {
-			case USoundAudioFormatSigned8:
-			case USoundAudioFormatSigned16LSB:
-			case USoundAudioFormatSigned16MSB:
-				if (i == USoundAudioFormatSigned16MSB || i == USoundAudioFormatSigned16LSB) {
-					obtained->format = (USoundAudioFormat)i;
+			case USoundFormatSigned8:
+			case USoundFormatSigned16LSB:
+			case USoundFormatSigned16MSB:
+				if (i == USoundFormatSigned16MSB || i == USoundFormatSigned16LSB) {
+					obtained->format = (USoundFormat)i;
 					found = 1;
 				}
 				break;
 
-			case USoundAudioFormatUnsigned8:
-			case USoundAudioFormatUnsigned16LSB:
-			case USoundAudioFormatUnsigned16MSB:
-				if (i == USoundAudioFormatUnsigned16MSB || i == USoundAudioFormatUnsigned16LSB) {
-					obtained->format = (USoundAudioFormat)i;
+			case USoundFormatUnsigned8:
+			case USoundFormatUnsigned16LSB:
+			case USoundFormatUnsigned16MSB:
+				if (i == USoundFormatUnsigned16MSB || i == USoundFormatUnsigned16LSB) {
+					obtained->format = (USoundFormat)i;
 					found = 1;
 				}
 				break;
-			case USoundAudioFormatCount:
+			case USoundFormatCount:
 				break;
 		}
 	}
@@ -297,35 +297,35 @@ static int USoundDetectFormat(
 	 * 	- desired 8-bit, available 16-bit (non-matching sign)
 	 * 	- desired 16-bit, available 16-bit (non-matching sign & endianness)
 	 */
-	for (i = 0; !found && i < USoundAudioFormatCount; i++) {
+	for (i = 0; !found && i < USoundFormatCount; i++) {
 		if (!formatsAvailable[i])
 			continue;
 
 		/* take the first available 16-bit format */
-		if (i != USoundAudioFormatSigned8 && i != USoundAudioFormatUnsigned8) {
-			obtained->format = (USoundAudioFormat)i;
+		if (i != USoundFormatSigned8 && i != USoundFormatUnsigned8) {
+			obtained->format = (USoundFormat)i;
 			found = 1;
 		}
 	}
 
 	if (!found) {
 		/* prefer the same sign while downgrading to 8-bit */
-		if (formatsAvailable[USoundAudioFormatSigned8]
-			&& (desired->format == USoundAudioFormatSigned16LSB
-				|| desired->format == USoundAudioFormatSigned16MSB)) {
-			obtained->format = USoundAudioFormatSigned8;
+		if (formatsAvailable[USoundFormatSigned8]
+			&& (desired->format == USoundFormatSigned16LSB
+				|| desired->format == USoundFormatSigned16MSB)) {
+			obtained->format = USoundFormatSigned8;
 			found = 1;
-		} else if (formatsAvailable[USoundAudioFormatUnsigned8]
-			&& (desired->format == USoundAudioFormatUnsigned16LSB
-				|| desired->format == USoundAudioFormatUnsigned16MSB)) {
-			obtained->format = USoundAudioFormatUnsigned8;
+		} else if (formatsAvailable[USoundFormatUnsigned8]
+			&& (desired->format == USoundFormatUnsigned16LSB
+				|| desired->format == USoundFormatUnsigned16MSB)) {
+			obtained->format = USoundFormatUnsigned8;
 			found = 1;
 		}
 
-		for (i = 0; !found && i < USoundAudioFormatCount; i++) {
+		for (i = 0; !found && i < USoundFormatCount; i++) {
 			/* take the first available (8-bit) format */
 			if (formatsAvailable[i]) {
-				obtained->format = (USoundAudioFormat)i;
+				obtained->format = (USoundFormat)i;
 				found = 1;
 			}
 		}
@@ -357,7 +357,7 @@ int USoundInitXbios(const USoundAudioSpec* desired, USoundAudioSpec* obtained) {
 	long snd;
 	long mcsn = 0;
 	long stfa = 0;
-	int formatsAvailable[USoundAudioFormatCount] = { 0 };
+	int formatsAvailable[USoundFormatCount] = { 0 };
 	int has8bitStereo = 1;
 	int has16bitMono = 0;
 	int hasFreeFrequency = 0;
@@ -369,7 +369,7 @@ int USoundInitXbios(const USoundAudioSpec* desired, USoundAudioSpec* obtained) {
 
 	if (desired->frequency == 0 || desired->frequency > 64000
 		|| desired->channels == 0 || desired->channels > 2
-		|| desired->format >= USoundAudioFormatCount
+		|| desired->format >= USoundFormatCount
 		|| desired->samples == 0)
 		return 0;
 
@@ -497,10 +497,10 @@ int USoundInitXbios(const USoundAudioSpec* desired, USoundAudioSpec* obtained) {
 			unsigned short formats = Sndstatus(8);
 
 			if (formats & SND_FORMATSIGNED)
-				formatsAvailable[USoundAudioFormatSigned8]   = 1;
+				formatsAvailable[USoundFormatSigned8]   = 1;
 
 			if (formats & SND_FORMATUNSIGNED)
-				formatsAvailable[USoundAudioFormatUnsigned8] = 1;
+				formatsAvailable[USoundFormatUnsigned8] = 1;
 		}
 
 		if (bitDepth & 0x02) {
@@ -509,22 +509,22 @@ int USoundInitXbios(const USoundAudioSpec* desired, USoundAudioSpec* obtained) {
 
 			if (formats & SND_FORMATSIGNED) {
 				if (formats & SND_FORMATBIGENDIAN)
-					formatsAvailable[USoundAudioFormatSigned16MSB] = 1;
+					formatsAvailable[USoundFormatSigned16MSB] = 1;
 				if (formats & SND_FORMATLITTLEENDIAN)
-					formatsAvailable[USoundAudioFormatSigned16LSB] = 1;
+					formatsAvailable[USoundFormatSigned16LSB] = 1;
 			}
 
 			if (formats & SND_FORMATUNSIGNED) {
 				if (formats & SND_FORMATBIGENDIAN)
-					formatsAvailable[USoundAudioFormatUnsigned16MSB] = 1;
+					formatsAvailable[USoundFormatUnsigned16MSB] = 1;
 				if (formats & SND_FORMATLITTLEENDIAN)
-					formatsAvailable[USoundAudioFormatUnsigned16LSB] = 1;
+					formatsAvailable[USoundFormatUnsigned16LSB] = 1;
 			}
 		}
 	} else {
 		/* by default assume just signed 8-bit and/or 16-bit big endian */
-		formatsAvailable[USoundAudioFormatSigned8]     = (snd & SND_8BIT) != 0;
-		formatsAvailable[USoundAudioFormatSigned16MSB] = (snd & SND_16BIT) != 0;
+		formatsAvailable[USoundFormatSigned8]     = (snd & SND_8BIT) != 0;
+		formatsAvailable[USoundFormatSigned16MSB] = (snd & SND_16BIT) != 0;
 	}
 
 	if (!USoundDetectFormat(formatsAvailable, desired, obtained)) {
@@ -653,13 +653,13 @@ int USoundInitXbios(const USoundAudioSpec* desired, USoundAudioSpec* obtained) {
 	}
 
 	if (desired->channels == 1
-		&& obtained->format != USoundAudioFormatSigned8
-		&& obtained->format != USoundAudioFormatUnsigned8
+		&& obtained->format != USoundFormatSigned8
+		&& obtained->format != USoundFormatUnsigned8
 		&& !has16bitMono) {
 		/* Falcon and FireBee lack 16-bit mono */
 		obtained->channels = 2;
 	} else if (desired->channels == 2
-		&& (obtained->format == USoundAudioFormatSigned8 || obtained->format == USoundAudioFormatUnsigned8)
+		&& (obtained->format == USoundFormatSigned8 || obtained->format == USoundFormatUnsigned8)
 		&& !has8bitStereo) {
 		/* ST emulation lacks 8-bit stereo */
 		obtained->channels = 1;
@@ -668,48 +668,48 @@ int USoundInitXbios(const USoundAudioSpec* desired, USoundAudioSpec* obtained) {
 	}
 
 	switch (obtained->format) {
-		case USoundAudioFormatSigned8:
-		case USoundAudioFormatUnsigned8:
+		case USoundFormatSigned8:
+		case USoundFormatUnsigned8:
 			if (obtained->channels == 1)
 				Setmode(MODE_MONO);
 			else
 				Setmode(MODE_STEREO8);
 			break;
 
-		case USoundAudioFormatSigned16LSB:
-		case USoundAudioFormatSigned16MSB:
-		case USoundAudioFormatUnsigned16LSB:
-		case USoundAudioFormatUnsigned16MSB:
+		case USoundFormatSigned16LSB:
+		case USoundFormatSigned16MSB:
+		case USoundFormatUnsigned16LSB:
+		case USoundFormatUnsigned16MSB:
 			if (obtained->channels == 1)
 				Setmode(MODE_MONO16);
 			else
 				Setmode(MODE_STEREO16);
 			break;
-		case USoundAudioFormatCount:
+		case USoundFormatCount:
 			break;
 	}
 
 	if (snd & SND_EXT) {
 		switch (obtained->format) {
-			case USoundAudioFormatSigned8:
+			case USoundFormatSigned8:
 				Soundcmd(8, SND_FORMATSIGNED);
 				break;
-			case USoundAudioFormatUnsigned8:
+			case USoundFormatUnsigned8:
 				Soundcmd(8, SND_FORMATUNSIGNED);
 				break;
-			case USoundAudioFormatSigned16LSB:
+			case USoundFormatSigned16LSB:
 				Soundcmd(9, SND_FORMATSIGNED | SND_FORMATLITTLEENDIAN);
 				break;
-			case USoundAudioFormatSigned16MSB:
+			case USoundFormatSigned16MSB:
 				Soundcmd(9, SND_FORMATSIGNED | SND_FORMATBIGENDIAN);
 				break;
-			case USoundAudioFormatUnsigned16LSB:
+			case USoundFormatUnsigned16LSB:
 				Soundcmd(9, SND_FORMATUNSIGNED | SND_FORMATLITTLEENDIAN);
 				break;
-			case USoundAudioFormatUnsigned16MSB:
+			case USoundFormatUnsigned16MSB:
 				Soundcmd(9, SND_FORMATUNSIGNED | SND_FORMATBIGENDIAN);
 				break;
-			case USoundAudioFormatCount:
+			case USoundFormatCount:
 				break;
 		}
 	}
@@ -722,8 +722,8 @@ int USoundInitXbios(const USoundAudioSpec* desired, USoundAudioSpec* obtained) {
 		obtained->samples >>= 1;
 
 	obtained->size = obtained->samples * obtained->channels;
-	if (obtained->format != USoundAudioFormatSigned8
-		&& obtained->format != USoundAudioFormatUnsigned8) {
+	if (obtained->format != USoundFormatSigned8
+		&& obtained->format != USoundFormatUnsigned8) {
 		/* 16-bit samples */
 		obtained->size *= 2;
 	}

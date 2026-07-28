@@ -5,22 +5,22 @@ This is a header-only implementation of a system-friendly audio XBIOS setup. It 
 It consists of an `enum`, `struct` and two functions:
 ```C
 typedef enum {
-	USoundAudioFormatSigned8,
-	USoundAudioFormatSigned16LSB,
-	USoundAudioFormatSigned16MSB,
-	USoundAudioFormatUnsigned8,
-	USoundAudioFormatUnsigned16LSB,
-	USoundAudioFormatUnsigned16MSB,
+	USoundFormatSigned8,
+	USoundFormatSigned16LSB,
+	USoundFormatSigned16MSB,
+	USoundFormatUnsigned8,
+	USoundFormatUnsigned16LSB,
+	USoundFormatUnsigned16MSB,
 
-	USoundAudioFormatCount
-} USoundAudioFormat;
+	USoundFormatCount
+} USoundFormat;
 
 typedef struct {
-	uint16_t			frequency;	/* in samples per second */
-	uint8_t				channels;	/* 1: mono, 2: stereo */
-	USoundAudioFormat	format;		/* see USoundAudioFormat */
-	uint16_t			samples;	/* number of samples to process (2^N) */
-	uint32_t			size;		/* buffer size (calculated ) */
+	uint16_t		frequency;	/* in samples per second */
+	uint8_t			channels;	/* 1: mono, 2: stereo */
+	USoundFormat	format;		/* see USoundFormat */
+	uint16_t		samples;	/* number of samples to process (2^N) */
+	uint32_t		size;		/* buffer size (calculated ) */
 } USoundAudioSpec;
 
 int USoundInitXbios(const USoundAudioSpec* desired, USoundAudioSpec* obtained);
