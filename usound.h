@@ -544,8 +544,8 @@ USOUND_DEF int USoundInitXbios(const USoundSpec* desired, USoundSpec* obtained, 
 			extClock2 = 2;	/* 24.576 MHz (48000 Hz) */
 		}
 
-		formatsAvailable[AudioFormatSigned8]     = 1;
-		formatsAvailable[AudioFormatSigned16MSB] = 1;
+		formatsAvailable[USoundFormatSigned8]     = 1;
+		formatsAvailable[USoundFormatSigned16MSB] = 1;
 
 		// TODO: set the falcon compatible mode for Devconnect()
 		// TODO: maybe check for external source, too
