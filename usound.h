@@ -625,6 +625,10 @@ USOUND_DEF int USoundInitXbios(const USoundSpec* desired, USoundSpec* obtained, 
 		int i;
 
 		for (i = 0; i < (int)(sizeof(frequencies) / sizeof(frequencies[0])); i++) {
+			/* StarTrack clock/prescale settings, invalid on anything else */
+			if (frequencies[i].clk == 3 && !strk)
+				continue;
+
 			/* assume that SND_16BIT implies availability of Falcon frequencies */
 			if (frequencies[i].prescale != CLKOLD && !(snd & SND_16BIT) && !strk)
 				continue;
