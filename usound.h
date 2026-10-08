@@ -562,6 +562,7 @@ USOUND_DEF int USoundInitXbios(const USoundSpec* desired, USoundSpec* obtained, 
 
 	/* reset connection matrix (and other settings) */
 	Sndstatus(SND_RESET);
+	Soundcmd(ADCINPUT, context->oldAdcInput);
 
 	if (hasFreeFrequency) {
 		Devconnect(DMAPLAY, DAC, CLK25M, CLKOLD, NO_SHAKE);
@@ -758,7 +759,7 @@ USOUND_DEF int USoundInitXbios(const USoundSpec* desired, USoundSpec* obtained, 
 		}
 	}
 
-	Soundcmd(ADDERIN, MATIN);	/* set matrix to the adder */
+	Soundcmd(ADDERIN, context->oldAdderIn | MATIN);
 
 	/* (lag in ms) = (samples / frequency) * 1000 */
 	obtained->samples = desired->samples;
