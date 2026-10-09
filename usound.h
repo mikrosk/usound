@@ -634,8 +634,12 @@ USOUND_DEF int USoundInitXbios(const USoundSpec* desired, USoundSpec* obtained, 
 			if (frequencies[i].prescale != CLKOLD && !(snd & SND_16BIT) && !strk)
 				continue;
 
-			/* skip 6258 Hz if on Falcon */
-			if ((mch == MCH_FALCON || mch == MCH_ARANYM) && frequencies[i].prescale == CLKOLD && frequencies[i].prescaleOld == PRE1280)
+			/*
+			 * skip STE/TT frequencies if on Falcon: its STE compatible mode
+			 * runs at 25.175 MHz / 512, 1024 and 2048 (49170, 24585 and
+			 * 12292 Hz), not at the STE/TT rates; prescale 1280 is muted
+			 */
+			if ((mch == MCH_FALCON || mch == MCH_ARANYM) && frequencies[i].prescale == CLKOLD)
 				continue;
 
 			/* skip external clock frequencies if not present */
