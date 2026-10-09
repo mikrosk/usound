@@ -574,55 +574,61 @@ USOUND_DEF int USoundInitXbios(const USoundSpec* desired, USoundSpec* obtained, 
 			int prescale;		/* prescale for Devconnect() */
 			int prescaleOld;	/* prescale for Soundcmd(SETPRESCALE), -1 if prescale != CLKOLD */
 			int clkType;		/* 0: internal, 1: external 44.1 kHz, 2: external 48 kHz */
+			int tt;				/* 1: TT frequency, 0: STE frequency (if prescale == CLKOLD) */
 		};
 
 		static const struct FrequencySetting frequencies[] = {
-			/* STE/TT */
-			{ 50066, CLK25M, CLKOLD,  PRE160, 0 },
-			{ 25033, CLK25M, CLKOLD,  PRE320, 0 },
-			{ 12517, CLK25M, CLKOLD,  PRE640, 0 },
-			{  6258, CLK25M, CLKOLD, PRE1280, 0 },
+			/* STE */
+			{ 50066, CLK25M, CLKOLD,  PRE160, 0, 0 },
+			{ 25033, CLK25M, CLKOLD,  PRE320, 0, 0 },
+			{ 12517, CLK25M, CLKOLD,  PRE640, 0, 0 },
+			{  6258, CLK25M, CLKOLD, PRE1280, 0, 0 },
+			/* TT */
+			{ 50337, CLK25M, CLKOLD,  PRE160, 0, 1 },
+			{ 25169, CLK25M, CLKOLD,  PRE320, 0, 1 },
+			{ 12584, CLK25M, CLKOLD,  PRE640, 0, 1 },
+			{  6292, CLK25M, CLKOLD, PRE1280, 0, 1 },
 			/* Falcon */
-			{ 49170, CLK25M, CLK50K, -1, 0 },
-			{ 32780, CLK25M, CLK33K, -1, 0 },
-			{ 24585, CLK25M, CLK25K, -1, 0 },
-			{ 19668, CLK25M, CLK20K, -1, 0 },
-			{ 16390, CLK25M, CLK16K, -1, 0 },
-			{ 12292, CLK25M, CLK12K, -1, 0 },
-			{  9834, CLK25M, CLK10K, -1, 0 },
-			{  8195, CLK25M, CLK8K,  -1, 0 },
+			{ 49170, CLK25M, CLK50K, -1, 0, 0 },
+			{ 32780, CLK25M, CLK33K, -1, 0, 0 },
+			{ 24585, CLK25M, CLK25K, -1, 0, 0 },
+			{ 19668, CLK25M, CLK20K, -1, 0, 0 },
+			{ 16390, CLK25M, CLK16K, -1, 0, 0 },
+			{ 12292, CLK25M, CLK12K, -1, 0, 0 },
+			{  9834, CLK25M, CLK10K, -1, 0, 0 },
+			{  8195, CLK25M, CLK8K,  -1, 0, 0 },
 			/* CD */
-			{ 44100, CLKEXT, CLK50K, -1, 1 },
-			{ 29400, CLKEXT, CLK33K, -1, 1 },
-			{ 22050, CLKEXT, CLK25K, -1, 1 },
-			{ 17640, CLKEXT, CLK20K, -1, 1 },
-			{ 14700, CLKEXT, CLK16K, -1, 1 },
-			{ 11025, CLKEXT, CLK12K, -1, 1 },
-			{  8820, CLKEXT, CLK10K, -1, 1 },
-			{  7350, CLKEXT, CLK8K,  -1, 1 },
+			{ 44100, CLKEXT, CLK50K, -1, 1, 0 },
+			{ 29400, CLKEXT, CLK33K, -1, 1, 0 },
+			{ 22050, CLKEXT, CLK25K, -1, 1, 0 },
+			{ 17640, CLKEXT, CLK20K, -1, 1, 0 },
+			{ 14700, CLKEXT, CLK16K, -1, 1, 0 },
+			{ 11025, CLKEXT, CLK12K, -1, 1, 0 },
+			{  8820, CLKEXT, CLK10K, -1, 1, 0 },
+			{  7350, CLKEXT, CLK8K,  -1, 1, 0 },
 			/* DAT */
-			{ 48000, CLKEXT, CLK50K, -1, 2 },
-			{ 32000, CLKEXT, CLK33K, -1, 2 },
-			{ 24000, CLKEXT, CLK25K, -1, 2 },
-			{ 19200, CLKEXT, CLK20K, -1, 2 },
-			{ 16000, CLKEXT, CLK16K, -1, 2 },
-			{ 12000, CLKEXT, CLK12K, -1, 2 },
-			{  9600, CLKEXT, CLK10K, -1, 2 },
-			{  8000, CLKEXT, CLK8K,  -1, 2 },
+			{ 48000, CLKEXT, CLK50K, -1, 2, 0 },
+			{ 32000, CLKEXT, CLK33K, -1, 2, 0 },
+			{ 24000, CLKEXT, CLK25K, -1, 2, 0 },
+			{ 19200, CLKEXT, CLK20K, -1, 2, 0 },
+			{ 16000, CLKEXT, CLK16K, -1, 2, 0 },
+			{ 12000, CLKEXT, CLK12K, -1, 2, 0 },
+			{  9600, CLKEXT, CLK10K, -1, 2, 0 },
+			{  8000, CLKEXT, CLK8K,  -1, 2, 0 },
 			/* StarTrack, Falcon compatible mode */
-			{ 48000, 3,      3,      -1, 0 },
-			{ 44100, 3,      2,      -1, 0 },
-			{ 33075, 3,      11,     -1, 0 },
-			{ 32000, 3,      1,      -1, 0 },
-			{ 24000, 3,      10,     -1, 0 },
-			{ 22050, 3,      9,      -1, 0 },
-			{ 16537, 3,      8,      -1, 0 },
-			{ 16000, 3,      7,      -1, 0 },
-			{ 12000, 3,      6,      -1, 0 },
-			{ 11025, 3,      5,      -1, 0 },
-			{  8000, 3,      4,      -1, 0 }
+			{ 48000, 3,      3,      -1, 0, 0 },
+			{ 44100, 3,      2,      -1, 0, 0 },
+			{ 33075, 3,      11,     -1, 0, 0 },
+			{ 32000, 3,      1,      -1, 0, 0 },
+			{ 24000, 3,      10,     -1, 0, 0 },
+			{ 22050, 3,      9,      -1, 0, 0 },
+			{ 16537, 3,      8,      -1, 0, 0 },
+			{ 16000, 3,      7,      -1, 0, 0 },
+			{ 12000, 3,      6,      -1, 0, 0 },
+			{ 11025, 3,      5,      -1, 0, 0 },
+			{  8000, 3,      4,      -1, 0, 0 }
 		};
-		struct FrequencySetting frequencySetting = { 0, 0, 0, 0, 0 };
+		struct FrequencySetting frequencySetting = { 0, 0, 0, 0, 0, 0 };
 		int i;
 
 		for (i = 0; i < (int)(sizeof(frequencies) / sizeof(frequencies[0])); i++) {
@@ -640,6 +646,10 @@ USOUND_DEF int USoundInitXbios(const USoundSpec* desired, USoundSpec* obtained, 
 			 * 12292 Hz), not at the STE/TT rates; prescale 1280 is muted
 			 */
 			if ((mch == MCH_FALCON || mch == MCH_ARANYM) && frequencies[i].prescale == CLKOLD)
+				continue;
+
+			/* the TT derives its STE/TT frequencies from 32.215905 MHz, the STE from 8.010613 MHz */
+			if (frequencies[i].prescale == CLKOLD && frequencies[i].tt != (mch == MCH_TT_OR_HADES))
 				continue;
 
 			/* skip external clock frequencies if not present */
